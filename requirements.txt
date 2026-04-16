@@ -1,0 +1,6 @@
+pandas
+yfinance
+transformers
+sqlalchemy
+scikit-learn
+torch
