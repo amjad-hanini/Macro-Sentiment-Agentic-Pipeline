@@ -66,3 +66,42 @@ print(f"🔮 Tomorrow's Anomaly Probability: {anomaly_prob:.2f}%")
 engine = create_engine('sqlite:///macro_data.db')
 merged_df.to_sql('macro_data', engine, if_exists='replace', index=False)
 print("✅ Database built and ready!")
+
+import datetime
+
+# --- 5. DYNAMIC REPORT GENERATION ---
+print("📝 Generating Dynamic LaTeX Report...")
+today_str = datetime.datetime.now().strftime("%B %d, %Y")
+latest_vix = latest_data['Volatility_VIX'].values[0]
+latest_sent = latest_data['Sentiment_Score'].values[0]
+
+latex_content = f"""\\documentclass{{article}}
+\\usepackage[margin=1in]{{geometry}}
+\\usepackage{{xcolor}}
+
+\\title{{\\textbf{{Daily Macro-Sentiment Pipeline Report}}}}
+\\author{{Autonomous AI Agent}}
+\\date{{{today_str}}}
+
+\\begin{{document}}
+\\maketitle
+
+\\section*{{Nightly Automation Status}}
+The automated GitHub Actions pipeline successfully fetched the latest global news and market data, processed sentiment via FinBERT, and updated the historical database.
+
+\\section*{{Current Market State}}
+\\begin{{itemize}}
+    \\item \\textbf{{Volatility Index (VIX):}} {latest_vix:.2f}
+    \\item \\textbf{{Aggregate News Sentiment:}} {latest_sent:.2f}
+\\end{{itemize}}
+
+\\section*{{AI Predictive Outlook}}
+Based on the latest divergence between market fear and news sentiment, the Random Forest model calculates the probability of a market anomaly occurring tomorrow at \\textbf{{\\color{{red}}{anomaly_prob:.2f}\\%}}.
+
+\\end{{document}}
+"""
+
+with open("final_report.tex", "w") as f:
+    f.write(latex_content)
+    
+print("📄 Dynamic PDF template saved!")
