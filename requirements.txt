@@ -4,3 +4,7 @@ transformers
 sqlalchemy
 scikit-learn
 torch
+streamlit
+plotly
+google-generativeai
+duckduckgo-search
