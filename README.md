@@ -23,8 +23,19 @@ This project is built on four core pillars of modern data engineering and AI:
 * **Frontend:** Streamlit, Plotly
 * **DevOps:** GitHub Actions, LaTeX automation
 
-## 🚀 How to Run Locally
+## 💻 Local Quickstart & Development
+Want to run this AI pipeline on your own machine? Follow these steps:
 
-1. Clone this repository:
-   ```bash
-   git clone [https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline.git](https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline.git)
+**1. Clone the repository:**
+`git clone https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline.git`
+`cd Macro-Sentiment-Agentic-Pipeline`
+
+**2. Install the required tools:**
+`pip install -r requirements.txt`
+
+**3. Run the Backend Data Pipeline (Optional):**
+*(This will fetch new data and rebuild the local SQLite database)*
+`python pipeline.py`
+
+**4. Launch the Streamlit Dashboard:**
+`streamlit run app.py`
