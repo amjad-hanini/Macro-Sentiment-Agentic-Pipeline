@@ -4,6 +4,8 @@ An end-to-end, automated data engineering pipeline and AI reasoning system that 
 
 ## 🏗️ System Architecture
 
+**🔴 Live Interactive Dashboard:** [Click here to view the Streamlit App](https://macro-sentiment-agentic-pipeline.streamlit.app/)
+
 This project is built on four core pillars of modern data engineering and AI:
 
 1. **Volume (Data Ingestion & Processing):** - Utilizes Python-based MapReduce-style chunking to ingest and clean large-scale historical Reddit WorldNews datasets alongside Yahoo Finance market data (DJIA & VIX) without overloading memory limits.
