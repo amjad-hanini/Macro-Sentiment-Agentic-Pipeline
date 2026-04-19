@@ -25,7 +25,10 @@ st.markdown(
 )
 
 with st.sidebar.form("api_form"):
-    api_key = st.text_input("Enter Google Gemini API Key:", type="password")
+    st.markdown("### 🗝️ API Key Required")
+    st.markdown("To run the AI Analysis Agents, you need a free Google Gemini API key.")
+    st.markdown("[👉 **Click here to get a free key**](https://aistudio.google.com/app/apikey)")
+    api_key = st.text_input("Paste your API Key here:", type="password")
     submit_key = st.form_submit_button("Save Key")
 
 @st.cache_data
