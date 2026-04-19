@@ -2,6 +2,11 @@
 
 An end-to-end, automated data engineering pipeline and AI reasoning system that detects, predicts, and explains divergences between macroeconomic reality and public news narratives.
 
+### 🌟 Enterprise-Grade Features
+* **🌐 Live Data Ingestion:** An automated nightly web scraper (DuckDuckGo Search) captures real-time global financial headlines to constantly update the AI's short-term memory.
+* **🧠 Agentic RAG Architecture:** Utilizes Gemini 2.5 Flash to synthesize historical database anomalies with live web context.
+* **🤖 Zero-Maintenance Cron Jobs:** GitHub Actions handles Python dependency management, data processing, and LaTeX PDF compilation every night at midnight UTC without human intervention.
+
 ## 🏗️ System Architecture
 
 **🔴 Live Interactive Dashboard:** [Click here to view the Streamlit App](https://macro-sentiment-agentic-pipeline.streamlit.app/)
