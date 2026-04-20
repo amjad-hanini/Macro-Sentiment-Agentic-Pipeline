@@ -48,6 +48,15 @@ if submit_keys:
     if alpaca_key and alpaca_secret:
         st.sidebar.success("✅ Trading Webhook Armed.")
 
+# --- DISCLAIMER FOOTER ---
+st.sidebar.markdown("---")
+st.sidebar.markdown("### ⚠️ Legal Disclaimer")
+st.sidebar.caption(
+    "This system is for **educational and research purposes only**. "
+    "The AI predictions, risk scores, and autonomous executions are simulated models and do not constitute financial advice. "
+    "Algorithmic trading carries significant financial risk."
+)
+
 # ==========================================
 # 2. DATA INGESTION & MACHINE LEARNING
 # ==========================================
@@ -174,7 +183,7 @@ with tab_agents:
     if selected_date_str:
         if st.button("Initiate Multi-Agent Debate", type="primary"):
             if not api_key:
-                st.warning("Please save your Gemini API Key.")
+                st.warning("Please save your Gemini API Key in the sidebar.")
             else:
                 with st.spinner("Agent 1 (Researcher) scraping intelligence..."):
                     try:
@@ -225,7 +234,6 @@ with tab_agents:
                         if report['action'] in ["BUY", "SELL"]:
                             if alpaca_key and alpaca_secret:
                                 try:
-                                    # Connect to Alpaca Paper Trading Environment
                                     api = tradeapi.REST(alpaca_key, alpaca_secret, base_url='https://paper-api.alpaca.markets')
                                     order = api.submit_order(
                                         symbol='SPY',
@@ -263,7 +271,6 @@ with tab_graph:
                         ddg_results = DDGS().text(f"major global financial news on {selected_date_str}", max_results=3)
                         web_context = " ".join([res['body'] for res in ddg_results])
                         
-                        # Extracting a Mermaid.js Graph
                         graph_prompt = f"""
                         Read this financial news context: "{web_context}"
                         Extract the 5 most important entities (like Federal Reserve, Tech Stocks, Inflation) and their relationships.
@@ -275,7 +282,6 @@ with tab_graph:
                         graph_response = model.generate_content(graph_prompt)
                         mermaid_code = graph_response.text.replace('```mermaid', '').replace('```', '').strip()
                         
-                        # Render the interactive graph natively in Streamlit
                         st.components.v1.html(
                             f"""
                             <div class="mermaid">
