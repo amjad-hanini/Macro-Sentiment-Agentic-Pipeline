@@ -16,12 +16,16 @@ An end-to-end, automated data engineering pipeline and AI reasoning system that 
 
 This project is built on four core pillars of modern data engineering and AI:
 
-1. **Volume (Data Ingestion & Processing):** - Utilizes Python-based MapReduce-style chunking to ingest and clean large-scale historical Reddit WorldNews datasets alongside Yahoo Finance market data (DJIA & VIX) without overloading memory limits.
-2. **Prediction (Machine Learning):** - Deploys a local **FinBERT NLP** model to score the sentiment of daily news.
-   - Trains a **Random Forest Classifier** to predict the probability of future market anomalies based on historical fear indexes and sentiment divergence.
-3. **Agentic RAG (Retrieval-Augmented Generation):** - A multi-agent LLM system (powered by Google Gemini) autonomously detects market anomalies.
-   - Integrates **DuckDuckGo Search API** to dynamically scrape the live web for historical context surrounding the anomaly date, feeding a synthesized, hallucination-free report to the user.
-4. **Velocity (CI/CD Automation):** - Fully automated via **GitHub Actions**. A nightly CRON job executes the pipeline, updates the SQLite/PostgreSQL database, compiles a LaTeX PDF summary report, and securely commits the fresh data.
+1. **Volume (Big Data Ingestion & MapReduce):** - Ingests large-scale historical Reddit WorldNews datasets alongside Yahoo Finance market data (DJIA & VIX).
+   - Utilizes a custom Python **MapReduce** algorithm to process thousands of financial headlines, filtering stop words to dynamically aggregate "Top Trending Crisis Themes" across market anomalies.
+2. **Prediction (Supervised, Unsupervised & Recommendation ML):** - Deploys a **FinBERT NLP** model to score the sentiment of daily news.
+   - Trains a **Random Forest Classifier** to predict the probability of future market anomalies.
+   - Utilizes a **Gaussian Mixture Model (GMM)** to cluster data into dynamic Market Regimes (Standard vs. Crisis).
+   - Employs a **Content-Based Recommender** using cosine similarity to mathematically match current market conditions to historical crashes.
+3. **Multi-Agent RAG & Memory Integration:** - A multi-agent LLM system acts as a "Lead Portfolio Manager," synthesizing Recommender data, MapReduce themes, and live DuckDuckGo web scrapes to generate hallucination-free reports.
+   - **Agentic Memory Loop:** The database permanently archives AI outputs, allowing the system to retrieve past AI thought processes when similar market regimes occur.
+   - **Text-to-SQL Agent:** Users can interrogate the SQLite database dynamically using natural language via Gemini 2.5 Flash.
+4. **Velocity (CI/CD Automation):** - Fully automated via **GitHub Actions**. A nightly CRON job executes the pipeline, updates the SQLite database, compiles a LaTeX PDF summary report, and securely commits the fresh data.
 
 ## 💻 Tech Stack
 * **Language:** Python 3.10
