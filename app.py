@@ -32,6 +32,13 @@ with st.sidebar.form("api_form"):
     api_key = st.text_input("Paste your API Key here:", type="password")
     submit_key = st.form_submit_button("Save Key")
 
+# --- NEW: Success Feedback ---
+if submit_key:
+    if api_key:
+        st.sidebar.success("✅ Key Saved! Agents are ready to deploy.")
+    else:
+        st.sidebar.error("❌ Please paste a valid key first.")
+
 @st.cache_data
 def fetch_from_db():
     engine = create_engine('sqlite:///macro_data.db')
