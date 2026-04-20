@@ -7,7 +7,6 @@ from duckduckgo_search import DDGS
 import json
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics.pairwise import cosine_similarity
-import re
 
 st.set_page_config(page_title="Macro-Sentiment System", layout="wide")
 st.title("📈 BIA678: Autonomous Agentic Analyzer")
@@ -34,6 +33,7 @@ with st.sidebar.form("api_form"):
     api_key = st.text_input("Paste your API Key here:", type="password")
     submit_key = st.form_submit_button("Save Key")
 
+# --- Success Feedback ---
 if submit_key:
     if api_key:
         st.sidebar.success("✅ Key Saved! Agents are ready to deploy.")
@@ -61,14 +61,12 @@ def train_live_model(df):
 # --- BIG DATA FEATURE 1: Python MapReduce ---
 @st.cache_data
 def run_mapreduce(anomalies_df):
-    # MAP PHASE: Split all text into lowercased words, remove punctuation
+    # MAP PHASE: Split all text into lowercased words (No punctuation cleaning needed for this dataset)
     all_words = []
     stop_words = {"the", "and", "to", "of", "a", "in", "for", "is", "on", "that", "by", "this", "with", "i", "you", "it", "not", "or", "be", "are", "from", "at", "as"}
     
     for text in anomalies_df['Combined_News'].dropna():
-        # Clean basic punctuation to keep words pure
-        clean_text = re.sub(r'[^\w\s]', '', str(text).lower())
-        mapped_words = clean_text.split()
+        mapped_words = str(text).lower().split()
         all_words.extend([w for w in mapped_words if w not in stop_words and len(w) > 3])
         
     # REDUCE PHASE: Count frequencies
@@ -170,23 +168,28 @@ if not filtered_anomalies.empty:
                     except:
                         web_context = "No additional web context could be retrieved."
 
-                with st.spinner("Agents 2 & 3 are analyzing database records..."):
+                with st.spinner("Agents 2 & 3 are analyzing database records and Big Data metrics..."):
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     
+                    top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
+                    
                     system_prompt = f"""
-                    You are a trio of financial AI agents. Analyze this anomaly from {selected_date_str}:
+                    You are a Lead Portfolio Manager overseeing three specialist AI agents. Synthesize their findings regarding the market anomaly on {selected_date_str}.
+                    
+                    Data Inputs:
                     - Market Drop: {sample['Price_Change_Pct']:.2f}%
                     - Market Fear (VIX): {sample['Volatility_VIX']:.2f}
-                    - Database Headlines: "{sample['Combined_News']}"
+                    - Big Data MapReduce Macro Themes: {top_themes}
+                    - Recommender System Match: {best_match['Similarity']*100:.1f}% similarity to the crash on {best_match['Date'].strftime('%Y-%m-%d')}
                     - Live Web Scrape Context: "{web_context}"
                     
-                    Respond ONLY with a valid JSON using this EXACT strict format:
+                    Synthesize this into a strict JSON format:
                     {{
-                        "macro_theme": "Maximum 3 words.",
+                        "macro_theme": "Maximum 3 words summarizing the event.",
                         "risk_score": "Strictly an integer 1-10.",
-                        "quant_analysis": "One sentence explaining if the VIX justified the drop",
-                        "synthesized_report": "A short paragraph explaining the gap between the news and the market"
+                        "quant_analysis": "One sentence acting as the Quant Agent: Do the VIX and Recommender historical match justify this drop?",
+                        "synthesized_report": "A short paragraph acting as the Lead Manager: Combine the MapReduce trending themes, the historical context, and the web context into a final verdict."
                     }}
                     """
                     try:
