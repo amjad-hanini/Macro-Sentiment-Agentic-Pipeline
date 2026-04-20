@@ -45,14 +45,12 @@ if submit_key:
 @st.cache_data(ttl=600)
 def fetch_from_db():
     engine = create_engine('sqlite:///macro_data.db')
-    
-    # AI Memory Loop: Ensure the DB has a column to save past AI reports
     with engine.connect() as conn:
         try:
             conn.execute(text("ALTER TABLE macro_data ADD COLUMN Agent_Report TEXT"))
             conn.commit()
         except:
-            pass # Column already exists
+            pass 
             
     df = pd.read_sql('SELECT * FROM macro_data', engine)
     df['Date'] = pd.to_datetime(df['Date'])
@@ -65,17 +63,15 @@ def train_live_models(df):
     features = ['Volatility_VIX', 'Sentiment_Score']
     X = df[features]
     
-    # 1. Supervised Model (Anomaly Predictor)
     rf = RandomForestClassifier(n_estimators=100, random_state=42)
     rf.fit(X, df['Is_Anomaly'])
     
-    # 2. Unsupervised Model (GMM Market Regime Clustering)
     gmm = GaussianMixture(n_components=3, random_state=42)
     gmm.fit(X)
     
     return rf, gmm
 
-# --- BIG DATA FEATURE 1: Python MapReduce (No Punctuation Logic) ---
+# --- BIG DATA FEATURE 1: Python MapReduce ---
 @st.cache_data
 def run_mapreduce(anomalies_df):
     all_words = []
@@ -111,159 +107,177 @@ mask = (df_joined['Date'].dt.date >= date_range[0]) & (df_joined['Date'].dt.date
 filtered_df = df_joined.loc[mask]
 filtered_anomalies = df_anomalies.loc[(df_anomalies['Date'].dt.date >= date_range[0]) & (df_anomalies['Date'].dt.date <= date_range[1])]
 
-st.subheader("Market vs. Narrative Divergence")
-fig = go.Figure()
-fig.add_trace(go.Scatter(x=filtered_df['Date'].dt.strftime('%Y-%m-%d'), y=filtered_df['Price_Change_Pct'], name='DJIA % Change', line=dict(color='blue')))
-fig.add_trace(go.Scatter(x=filtered_df['Date'].dt.strftime('%Y-%m-%d'), y=filtered_df['Sentiment_Score'] * 5, name='FinBERT Sentiment', line=dict(color='green')))
-fig.add_trace(go.Scatter(x=filtered_anomalies['Date'].dt.strftime('%Y-%m-%d'), y=filtered_anomalies['Price_Change_Pct'], mode='markers', name='Anomalies', marker=dict(color='red', size=12)))
+# ==========================================
+# 🎨 UI UPGRADE 1: TABS LAYOUT
+# ==========================================
+tab_overview, tab_agents, tab_sql = st.tabs(["📊 Market Overview", "🧠 Agentic AI Suite", "🕵️‍♂️ Database Query"])
 
-fig.update_layout(xaxis_title="x", yaxis_title="y", xaxis=dict(type='category', nticks=15))
-st.plotly_chart(fig, use_container_width=True)
-
-# --- The 'What-If' AI Sandbox & MapReduce Layout ---
-st.markdown("---")
-col_sandbox, col_mapreduce = st.columns(2)
-
-with col_sandbox:
-    st.subheader("🎛️ AI ML Sandbox")
-    sim_vix = st.slider("Fake Volatility (VIX)", min_value=10.0, max_value=85.0, value=20.0, step=0.5)
-    sim_sent = st.slider("Fake News Sentiment", min_value=-1.0, max_value=1.0, value=0.0, step=0.05)
+with tab_overview:
+    st.subheader("Market vs. Narrative Divergence")
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=filtered_df['Date'].dt.strftime('%Y-%m-%d'), y=filtered_df['Price_Change_Pct'], name='DJIA % Change', line=dict(color='blue')))
+    fig.add_trace(go.Scatter(x=filtered_df['Date'].dt.strftime('%Y-%m-%d'), y=filtered_df['Sentiment_Score'] * 5, name='FinBERT Sentiment', line=dict(color='green')))
+    fig.add_trace(go.Scatter(x=filtered_anomalies['Date'].dt.strftime('%Y-%m-%d'), y=filtered_anomalies['Price_Change_Pct'], mode='markers', name='Anomalies', marker=dict(color='red', size=12)))
     
-    sim_prob = rf_model.predict_proba([[sim_vix, sim_sent]])[0][1] * 100
-    sim_regime = gmm_model.predict([[sim_vix, sim_sent]])[0]
+    fig.update_layout(xaxis_title="x", yaxis_title="y", xaxis=dict(type='category', nticks=15))
+    st.plotly_chart(fig, use_container_width=True)
     
-    regime_labels = {0: "Standard Trading", 1: "High Fear / Crisis", 2: "Correction Phase"}
+    st.markdown("---")
+    col_sandbox, col_mapreduce = st.columns(2)
     
-    col_a, col_b = st.columns(2)
-    col_a.metric("Anomaly Probability", f"{sim_prob:.2f}%")
-    col_b.metric("Detected Market Regime", regime_labels.get(sim_regime, "Unknown"))
-
-with col_mapreduce:
-    st.subheader("🗺️ MapReduce: Top Crisis Themes")
-    st.dataframe(trending_themes_df, use_container_width=True, hide_index=True)
-
-st.markdown("---")
-
-# --- ORIGINAL AGENTIC RAG & BIG DATA RECOMMENDER ---
-st.subheader("🤖 Agentic RAG & Multi-Agent Engine")
-if not filtered_anomalies.empty:
-    selected_date_str = st.selectbox("Select Anomaly Date to Deploy Agents:", filtered_anomalies['Date'].dt.strftime('%Y-%m-%d').tolist())
-    sample = df_anomalies[df_anomalies['Date'].dt.strftime('%Y-%m-%d') == selected_date_str].iloc[0]
-    
-    features_for_sim = ['Volatility_VIX', 'Sentiment_Score', 'Price_Change_Pct']
-    target_vector = [sample[features_for_sim].values]
-    all_vectors = df_anomalies[features_for_sim].values
-    similarities = cosine_similarity(target_vector, all_vectors)[0]
-    
-    df_anomalies_sim = df_anomalies.copy()
-    df_anomalies_sim['Similarity'] = similarities
-    df_anomalies_sim = df_anomalies_sim[df_anomalies_sim['Date'] != sample['Date']]
-    best_match = df_anomalies_sim.sort_values(by='Similarity', ascending=False).iloc[0]
-    
-    st.info(f"💡 **Big Data Recommender:** Based on algorithmic cosine similarity, market conditions on **{selected_date_str}** are a **{best_match['Similarity']*100:.1f}% match** to the historical anomaly on **{best_match['Date'].strftime('%Y-%m-%d')}**.")
-
-    # --- AI MEMORY LOOP CHECK ---
-    if pd.notna(best_match.get('Agent_Report')) and best_match['Agent_Report'] != None:
-        with st.expander(f"🧠 View AI Memory Archive for {best_match['Date'].strftime('%Y-%m-%d')}"):
-            st.json(best_match['Agent_Report'])
-
-    if st.button("Deploy Analysis Agents", type="primary"):
-        if not api_key:
-            st.warning("Please save your Gemini API Key in the sidebar.")
+    with col_sandbox:
+        st.subheader("🎛️ AI ML Sandbox")
+        sim_vix = st.slider("Fake Volatility (VIX)", min_value=10.0, max_value=85.0, value=20.0, step=0.5)
+        sim_sent = st.slider("Fake News Sentiment", min_value=-1.0, max_value=1.0, value=0.0, step=0.05)
+        
+        sim_prob = rf_model.predict_proba([[sim_vix, sim_sent]])[0][1] * 100
+        sim_regime = gmm_model.predict([[sim_vix, sim_sent]])[0]
+        
+        st.metric("Anomaly Probability", f"{sim_prob:.2f}%")
+        
+        # 🎨 UI UPGRADE 2: COLOR PSYCHOLOGY
+        if sim_regime == 0:
+            st.success("🟢 **Detected Market Regime:** Standard Trading")
+        elif sim_regime == 1:
+            st.error("🔴 **Detected Market Regime:** High Fear / Crisis")
         else:
-            with st.spinner("Agent 1 (Researcher) is scraping the web..."):
-                search_query = f"major global financial news on {selected_date_str}"
-                try:
-                    ddg_results = DDGS().text(search_query, max_results=3)
-                    web_context = " ".join([res['body'] for res in ddg_results])
-                except:
-                    web_context = "No additional web context could be retrieved."
+            st.warning("🟠 **Detected Market Regime:** Correction Phase")
+            
+    with col_mapreduce:
+        st.subheader("🗺️ MapReduce: Top Crisis Themes")
+        # 🎨 UI UPGRADE 3: PROGRESS BARS IN TABLE
+        st.dataframe(
+            trending_themes_df,
+            column_config={
+                "Macro Theme": "Crisis Theme",
+                "Frequency": st.column_config.ProgressColumn(
+                    "Frequency",
+                    help="Word frequency during anomalies",
+                    format="%d",
+                    min_value=0,
+                    max_value=int(trending_themes_df['Frequency'].max()),
+                ),
+            },
+            hide_index=True,
+            use_container_width=True
+        )
 
-            with st.spinner("Agents 2 & 3 are analyzing Big Data metrics..."):
+with tab_agents:
+    st.subheader("🤖 Agentic RAG & Multi-Agent Engine")
+    if not filtered_anomalies.empty:
+        selected_date_str = st.selectbox("Select Anomaly Date to Deploy Agents:", filtered_anomalies['Date'].dt.strftime('%Y-%m-%d').tolist())
+        sample = df_anomalies[df_anomalies['Date'].dt.strftime('%Y-%m-%d') == selected_date_str].iloc[0]
+        
+        features_for_sim = ['Volatility_VIX', 'Sentiment_Score', 'Price_Change_Pct']
+        target_vector = [sample[features_for_sim].values]
+        all_vectors = df_anomalies[features_for_sim].values
+        similarities = cosine_similarity(target_vector, all_vectors)[0]
+        
+        df_anomalies_sim = df_anomalies.copy()
+        df_anomalies_sim['Similarity'] = similarities
+        df_anomalies_sim = df_anomalies_sim[df_anomalies_sim['Date'] != sample['Date']]
+        best_match = df_anomalies_sim.sort_values(by='Similarity', ascending=False).iloc[0]
+        
+        st.info(f"💡 **Big Data Recommender:** Based on algorithmic cosine similarity, market conditions on **{selected_date_str}** are a **{best_match['Similarity']*100:.1f}% match** to the historical anomaly on **{best_match['Date'].strftime('%Y-%m-%d')}**.")
+    
+        if pd.notna(best_match.get('Agent_Report')) and best_match['Agent_Report'] != None:
+            with st.expander(f"🧠 View AI Memory Archive for {best_match['Date'].strftime('%Y-%m-%d')}"):
+                st.json(best_match['Agent_Report'])
+    
+        if st.button("Deploy Analysis Agents", type="primary"):
+            if not api_key:
+                st.warning("Please save your Gemini API Key in the sidebar.")
+            else:
+                with st.spinner("Agent 1 (Researcher) is scraping the web..."):
+                    search_query = f"major global financial news on {selected_date_str}"
+                    try:
+                        ddg_results = DDGS().text(search_query, max_results=3)
+                        web_context = " ".join([res['body'] for res in ddg_results])
+                    except:
+                        web_context = "No additional web context could be retrieved."
+    
+                with st.spinner("Agents 2 & 3 are analyzing Big Data metrics..."):
+                    genai.configure(api_key=api_key)
+                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
+                    
+                    system_prompt = f"""
+                    You are a Lead Portfolio Manager. Synthesize findings regarding the market anomaly on {selected_date_str}.
+                    Data:
+                    - Drop: {sample['Price_Change_Pct']:.2f}%
+                    - VIX: {sample['Volatility_VIX']:.2f}
+                    - MapReduce Themes: {top_themes}
+                    - Web Context: "{web_context}"
+                    
+                    Respond ONLY with a valid JSON using this EXACT strict format:
+                    {{
+                        "macro_theme": "Max 3 words.",
+                        "risk_score": "Strictly an integer 1-10.",
+                        "quant_analysis": "One sentence acting as the Quant Agent.",
+                        "synthesized_report": "A short paragraph acting as Lead Manager."
+                    }}
+                    """
+                    try:
+                        response = model.generate_content(system_prompt)
+                        raw_json = response.text.replace('```json', '').replace('```', '').strip()
+                        report = json.loads(raw_json)
+                        
+                        try:
+                            conn = sqlite3.connect('macro_data.db')
+                            cursor = conn.cursor()
+                            cursor.execute("UPDATE macro_data SET Agent_Report = ? WHERE Date = ?", (raw_json, sample['Date'].strftime('%Y-%m-%d %H:%M:%S')))
+                            conn.commit()
+                            conn.close()
+                        except Exception as db_e:
+                            st.sidebar.warning("Could not cache to local memory.")
+    
+                        col1, col2, col3 = st.columns(3)
+                        col1.metric("Primary Macro Theme", report['macro_theme'])
+                        col2.metric("Hidden Risk Score", f"{report['risk_score']}/10")
+                        col3.metric("VIX Volatility Level", f"{sample['Volatility_VIX']:.2f}")
+                        st.write(f"**Quantitative Analyst:** {report['quant_analysis']}")
+                        st.write(f"**Final Synthesized Report:** {report['synthesized_report']}")
+                    except Exception as e:
+                        st.error("🛑 Free Tier Speed Limit Reached or JSON Error Occurred.")
+    else:
+        st.write("No anomalies detected in this time range.")
+
+with tab_sql:
+    st.subheader("🕵️‍♂️ Database Agent (Text-to-SQL)")
+    st.write("Ask the AI to query your historical Big Data framework in plain English.")
+    
+    user_q = st.text_input("Ask a question (e.g., 'What was the highest VIX level in 2020?'):")
+    if user_q:
+        if not api_key:
+            st.warning("API key required for the Database Agent.")
+        else:
+            with st.spinner("Translating natural language to SQL..."):
                 genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash')
-                top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
+                sql_model = genai.GenerativeModel('gemini-2.5-flash')
                 
-                system_prompt = f"""
-                You are a Lead Portfolio Manager. Synthesize findings regarding the market anomaly on {selected_date_str}.
-                Data:
-                - Drop: {sample['Price_Change_Pct']:.2f}%
-                - VIX: {sample['Volatility_VIX']:.2f}
-                - MapReduce Themes: {top_themes}
-                - Web Context: "{web_context}"
+                schema_prompt = f"""
+                You are a SQL Data Analyst. Given the user question, write a valid SQLite query.
+                Table name: `macro_data`
+                Columns: `Date` (TEXT YYYY-MM-DD HH:MM:SS), `Price_Change_Pct` (FLOAT), `Volatility_VIX` (FLOAT), `Sentiment_Score` (FLOAT), `Is_Anomaly` (INTEGER 0 or 1).
                 
-                Respond ONLY with a valid JSON using this EXACT strict format:
-                {{
-                    "macro_theme": "Max 3 words.",
-                    "risk_score": "Strictly an integer 1-10.",
-                    "quant_analysis": "One sentence acting as the Quant Agent.",
-                    "synthesized_report": "A short paragraph acting as Lead Manager."
-                }}
+                Return ONLY the pure SQL string. Do not include markdown formatting or explanation.
+                
+                User Question: {user_q}
                 """
                 try:
-                    response = model.generate_content(system_prompt)
-                    raw_json = response.text.replace('```json', '').replace('```', '').strip()
-                    report = json.loads(raw_json)
+                    sql_resp = sql_model.generate_content(schema_prompt)
+                    raw_sql = sql_resp.text.replace('```sql', '').replace('```', '').strip()
                     
-                    # SAVE TO DB (The AI Memory Loop)
-                    try:
-                        conn = sqlite3.connect('macro_data.db')
-                        cursor = conn.cursor()
-                        cursor.execute("UPDATE macro_data SET Agent_Report = ? WHERE Date = ?", (raw_json, sample['Date'].strftime('%Y-%m-%d %H:%M:%S')))
-                        conn.commit()
-                        conn.close()
-                    except Exception as db_e:
-                        st.sidebar.warning("Could not cache to local memory.")
-
-                    col1, col2, col3 = st.columns(3)
-                    col1.metric("Primary Macro Theme", report['macro_theme'])
-                    col2.metric("Hidden Risk Score", f"{report['risk_score']}/10")
-                    col3.metric("VIX Volatility Level", f"{sample['Volatility_VIX']:.2f}")
-                    st.write(f"**Quantitative Analyst:** {report['quant_analysis']}")
-                    st.write(f"**Final Synthesized Report:** {report['synthesized_report']}")
+                    st.code(raw_sql, language="sql")
+                    
+                    engine = create_engine('sqlite:///macro_data.db')
+                    with engine.connect() as conn:
+                        result_df = pd.read_sql(text(raw_sql), conn)
+                    
+                    if not result_df.empty:
+                        st.dataframe(result_df, hide_index=True)
+                    else:
+                        st.info("Query returned no results.")
+                        
                 except Exception as e:
-                    st.error("🛑 Free Tier Speed Limit Reached or JSON Error Occurred.")
-else:
-    st.write("No anomalies detected in this time range.")
-
-# --- AGENTIC FEATURE: TEXT-TO-SQL CHATBOT ---
-st.markdown("---")
-st.subheader("🕵️‍♂️ Database Agent (Text-to-SQL)")
-st.write("Ask the AI to query your historical Big Data framework in plain English.")
-
-user_q = st.text_input("Ask a question (e.g., 'What was the highest VIX level in 2020?'):")
-if user_q:
-    if not api_key:
-        st.warning("API key required for the Database Agent.")
-    else:
-        with st.spinner("Translating natural language to SQL..."):
-            genai.configure(api_key=api_key)
-            sql_model = genai.GenerativeModel('gemini-2.5-flash')
-            
-            schema_prompt = f"""
-            You are a SQL Data Analyst. Given the user question, write a valid SQLite query.
-            Table name: `macro_data`
-            Columns: `Date` (TEXT YYYY-MM-DD HH:MM:SS), `Price_Change_Pct` (FLOAT), `Volatility_VIX` (FLOAT), `Sentiment_Score` (FLOAT), `Is_Anomaly` (INTEGER 0 or 1).
-            
-            Return ONLY the pure SQL string. Do not include markdown formatting or explanation.
-            
-            User Question: {user_q}
-            """
-            try:
-                sql_resp = sql_model.generate_content(schema_prompt)
-                raw_sql = sql_resp.text.replace('```sql', '').replace('```', '').strip()
-                
-                st.code(raw_sql, language="sql")
-                
-                # Execute the safe SQL
-                engine = create_engine('sqlite:///macro_data.db')
-                with engine.connect() as conn:
-                    result_df = pd.read_sql(text(raw_sql), conn)
-                
-                if not result_df.empty:
-                    st.dataframe(result_df, hide_index=True)
-                else:
-                    st.info("Query returned no results.")
-                    
-            except Exception as e:
-                st.error("Could not generate or execute the SQL query.")
+                    st.error("Could not generate or execute the SQL query.")
