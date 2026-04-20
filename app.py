@@ -6,6 +6,8 @@ import google.generativeai as genai
 from duckduckgo_search import DDGS
 import json
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics.pairwise import cosine_similarity
+import re
 
 st.set_page_config(page_title="Macro-Sentiment System", layout="wide")
 st.title("📈 BIA678: Autonomous Agentic Analyzer")
@@ -32,7 +34,6 @@ with st.sidebar.form("api_form"):
     api_key = st.text_input("Paste your API Key here:", type="password")
     submit_key = st.form_submit_button("Save Key")
 
-# --- NEW: Success Feedback ---
 if submit_key:
     if api_key:
         st.sidebar.success("✅ Key Saved! Agents are ready to deploy.")
@@ -57,14 +58,37 @@ def train_live_model(df):
     rf.fit(X, y)
     return rf
 
+# --- BIG DATA FEATURE 1: Python MapReduce ---
+@st.cache_data
+def run_mapreduce(anomalies_df):
+    # MAP PHASE: Split all text into lowercased words, remove punctuation
+    all_words = []
+    stop_words = {"the", "and", "to", "of", "a", "in", "for", "is", "on", "that", "by", "this", "with", "i", "you", "it", "not", "or", "be", "are", "from", "at", "as"}
+    
+    for text in anomalies_df['Combined_News'].dropna():
+        # Clean basic punctuation to keep words pure
+        clean_text = re.sub(r'[^\w\s]', '', str(text).lower())
+        mapped_words = clean_text.split()
+        all_words.extend([w for w in mapped_words if w not in stop_words and len(w) > 3])
+        
+    # REDUCE PHASE: Count frequencies
+    word_counts = {}
+    for word in all_words:
+        word_counts[word] = word_counts.get(word, 0) + 1
+        
+    # Sort and return top 10
+    sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    return pd.DataFrame(sorted_words, columns=['Macro Theme', 'Frequency'])
+
 try:
     df_joined, df_anomalies = fetch_from_db()
     rf_model = train_live_model(df_joined)
+    trending_themes_df = run_mapreduce(df_anomalies)
 except Exception as e:
     st.error("Database connection failed.")
     st.stop()
 
-# --- FEATURE 1: Time-Machine Filter ---
+# --- Time-Machine Filter ---
 st.sidebar.markdown("---")
 st.sidebar.markdown("### ⏱️ Time-Machine Filter")
 min_date = df_joined['Date'].min().date()
@@ -84,35 +108,25 @@ fig.add_trace(go.Scatter(x=filtered_anomalies['Date'].dt.strftime('%Y-%m-%d'), y
 fig.update_layout(xaxis_title="x", yaxis_title="y", xaxis=dict(type='category', nticks=15))
 st.plotly_chart(fig, use_container_width=True)
 
-# --- FEATURE 2: "What-If" AI Sandbox ---
+# --- The 'What-If' AI Sandbox & MapReduce Layout ---
 st.markdown("---")
-st.subheader("🎛️ The 'What-If' AI Sandbox")
-col_vix, col_sent, col_pred = st.columns(3)
+col_sandbox, col_mapreduce = st.columns(2)
 
-with col_vix:
+with col_sandbox:
+    st.subheader("🎛️ AI Sandbox")
     sim_vix = st.slider("Fake Volatility (VIX)", min_value=10.0, max_value=85.0, value=20.0, step=0.5)
-with col_sent:
     sim_sent = st.slider("Fake News Sentiment", min_value=-1.0, max_value=1.0, value=0.0, step=0.05)
-with col_pred:
     sim_prob = rf_model.predict_proba([[sim_vix, sim_sent]])[0][1] * 100
     st.metric("Live Anomaly Probability", f"{sim_prob:.2f}%")
-    if sim_prob > 50:
-        st.error("🚨 High Risk of Anomaly!")
-    else:
-        st.success("✅ Normal Market Conditions")
 
-# --- FEATURE 3: Model Diagnostics ---
-with st.expander("📊 View Model Diagnostics & Database Stats"):
-    d_col1, d_col2, d_col3 = st.columns(3)
-    d_col1.metric("Total Trading Days", len(df_joined))
-    d_col2.metric("Total Anomalies Detected", len(df_anomalies))
-    importance = rf_model.feature_importances_
-    d_col3.metric("VIX vs Sentiment Weight", f"{importance[0]*100:.0f}% / {importance[1]*100:.0f}%")
+with col_mapreduce:
+    st.subheader("🗺️ MapReduce: Top Crisis Themes")
+    st.dataframe(trending_themes_df, use_container_width=True, hide_index=True)
 
 st.markdown("---")
 
-# --- ORIGINAL AGENTIC RAG ---
-st.subheader("🤖 Agentic RAG: Deep Anomaly Breakdown")
+# --- ORIGINAL AGENTIC RAG & BIG DATA RECOMMENDER ---
+st.subheader("🤖 Agentic RAG & Content-Based Recommender")
 if "saved_reports" not in st.session_state:
     st.session_state.saved_reports = {}
 
@@ -120,6 +134,20 @@ if not filtered_anomalies.empty:
     selected_date_str = st.selectbox("Select Anomaly Date to Deploy Agents:", filtered_anomalies['Date'].dt.strftime('%Y-%m-%d').tolist())
     sample = df_anomalies[df_anomalies['Date'].dt.strftime('%Y-%m-%d') == selected_date_str].iloc[0]
     
+    # --- BIG DATA FEATURE 2: Content-Based Recommender ---
+    features_for_sim = ['Volatility_VIX', 'Sentiment_Score', 'Price_Change_Pct']
+    target_vector = [sample[features_for_sim].values]
+    all_vectors = df_anomalies[features_for_sim].values
+    similarities = cosine_similarity(target_vector, all_vectors)[0]
+    
+    # Find the most similar date that is NOT the exact same date
+    df_anomalies_sim = df_anomalies.copy()
+    df_anomalies_sim['Similarity'] = similarities
+    df_anomalies_sim = df_anomalies_sim[df_anomalies_sim['Date'] != sample['Date']]
+    best_match = df_anomalies_sim.sort_values(by='Similarity', ascending=False).iloc[0]
+    
+    st.info(f"💡 **Recommender System Output:** Based on algorithmic cosine similarity, market conditions on **{selected_date_str}** are a **{best_match['Similarity']*100:.1f}% match** to the historical anomaly on **{best_match['Date'].strftime('%Y-%m-%d')}**.")
+
     if st.button("Deploy Analysis Agents", type="primary"):
         if not api_key:
             st.warning("Please save your Gemini API Key in the sidebar.")
@@ -131,10 +159,10 @@ if not filtered_anomalies.empty:
                 col1.metric("Primary Macro Theme", report['macro_theme'])
                 col2.metric("Hidden Risk Score", f"{report['risk_score']}/10")
                 col3.metric("VIX Volatility Level", f"{sample['Volatility_VIX']:.2f}")
-                st.info(f"**Quantitative Analyst:** {report['quant_analysis']}")
-                st.success(f"**Final Synthesized Report:** {report['synthesized_report']}")
+                st.write(f"**Quantitative Analyst:** {report['quant_analysis']}")
+                st.write(f"**Final Synthesized Report:** {report['synthesized_report']}")
             else:
-                with st.spinner("Agent 1 (Researcher) is scraping the web for context via DuckDuckGo..."):
+                with st.spinner("Agent 1 (Researcher) is scraping the web..."):
                     search_query = f"major global financial news on {selected_date_str}"
                     try:
                         ddg_results = DDGS().text(search_query, max_results=3)
@@ -142,7 +170,7 @@ if not filtered_anomalies.empty:
                     except:
                         web_context = "No additional web context could be retrieved."
 
-                with st.spinner("Agents 2 & 3 are analyzing database records + web context..."):
+                with st.spinner("Agents 2 & 3 are analyzing database records..."):
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     
@@ -155,8 +183,8 @@ if not filtered_anomalies.empty:
                     
                     Respond ONLY with a valid JSON using this EXACT strict format:
                     {{
-                        "macro_theme": "Maximum 3 words. (e.g. 'Pharma Price Gouging')",
-                        "risk_score": "Strictly a single integer from 1 to 10. No text.",
+                        "macro_theme": "Maximum 3 words.",
+                        "risk_score": "Strictly an integer 1-10.",
                         "quant_analysis": "One sentence explaining if the VIX justified the drop",
                         "synthesized_report": "A short paragraph explaining the gap between the news and the market"
                     }}
@@ -171,8 +199,8 @@ if not filtered_anomalies.empty:
                         col1.metric("Primary Macro Theme", report['macro_theme'])
                         col2.metric("Hidden Risk Score", f"{report['risk_score']}/10")
                         col3.metric("VIX Volatility Level", f"{sample['Volatility_VIX']:.2f}")
-                        st.info(f"**Quantitative Analyst:** {report['quant_analysis']}")
-                        st.success(f"**Final Synthesized Report:** {report['synthesized_report']}")
+                        st.write(f"**Quantitative Analyst:** {report['quant_analysis']}")
+                        st.write(f"**Final Synthesized Report:** {report['synthesized_report']}")
                     except Exception as e:
                         st.error("🛑 Free Tier Speed Limit Reached or JSON Error Occurred.")
 else:
