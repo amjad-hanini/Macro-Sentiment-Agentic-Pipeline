@@ -33,21 +33,23 @@ st.markdown(
 )
 
 # Multi-API Authentication Sidebar
-with st.sidebar.form("api_form"):
-    st.markdown("### 🗝️ Intelligence Integration")
+st.sidebar.markdown("### 🗝️ Intelligence Integration")
+with st.sidebar.form("gemini_form"):
     api_key = st.text_input("Google Gemini API Key (Required):", type="password")
-    
-    st.markdown("### 💸 Execution Integration (Optional)")
+    submit_gemini = st.form_submit_button("Connect Intelligence")
+
+if submit_gemini and api_key:
+    st.sidebar.success("✅ Intelligence Core Online.")
+
+st.sidebar.markdown("### 💸 Execution Integration (Optional)")
+with st.sidebar.form("alpaca_form"):
     st.markdown("Enter [Alpaca Paper Trading](https://alpaca.markets/) keys to enable live autonomous execution.")
     alpaca_key = st.text_input("Alpaca API Key:", type="password")
     alpaca_secret = st.text_input("Alpaca Secret Key:", type="password")
-    submit_keys = st.form_submit_button("Save Architecture Keys")
+    submit_alpaca = st.form_submit_button("Connect Trading Webhook")
 
-if submit_keys:
-    if api_key:
-        st.sidebar.success("✅ Intelligence Core Online.")
-    if alpaca_key and alpaca_secret:
-        st.sidebar.success("✅ Trading Webhook Armed.")
+if submit_alpaca and alpaca_key and alpaca_secret:
+    st.sidebar.success("✅ Trading Webhook Armed.")
 
 # --- DISCLAIMER FOOTER ---
 st.sidebar.markdown("---")
