@@ -3,9 +3,11 @@
 An end-to-end, automated data engineering pipeline and AI reasoning system that detects, predicts, and explains divergences between macroeconomic reality and public news narratives.
 
 ### 🌟 Enterprise-Grade Features
-* **🌐 Live Data Ingestion:** An automated nightly web scraper (DuckDuckGo Search) captures real-time global financial headlines to constantly update the AI's short-term memory.
-* **🧠 Agentic RAG Architecture:** Utilizes Gemini 2.5 Flash to synthesize historical database anomalies with live web context.
-* **🤖 Zero-Maintenance Cron Jobs:** GitHub Actions handles Python dependency management, data processing, and LaTeX PDF compilation every night at midnight UTC without human intervention.
+* **🌐 Live Data Ingestion:** Automated nightly web scraping (DuckDuckGo Search) captures real-time global financial headlines to update the AI's short-term memory.
+* **🧠 Agentic RAG Architecture:** Utilizes Gemini 2.5 Flash to synthesize historical database anomalies with live web context via a custom UI.
+* **🤖 Zero-Maintenance Cron Jobs:** GitHub Actions handles Python dependency management, database overwrites, and LaTeX PDF compilation every night at midnight UTC without human intervention.
+* **🎛️ Live ML Inference Sandbox:** An interactive "What-If" UI caches a Random Forest model, allowing users to input custom VIX and sentiment metrics for real-time anomaly predictions.
+* **⏱️ Dynamic Time-Machine Filtering:** Interactive sliders allow users to slice historical market data and visualize specific economic events instantly.
 
 ## 🏗️ System Architecture
 
