@@ -29,18 +29,31 @@ This project is built on four core pillars of modern data engineering and AI:
 * **DevOps:** GitHub Actions, LaTeX automation
 
 ## 💻 Local Quickstart & Development
+
+> **🗝️ Prerequisite: Google Gemini API Key**
+> To run the interactive AI agents locally, you will need a free API key. 
+> [👉 Get your free key from Google AI Studio here](https://aistudio.google.com/app/apikey).
+
 Want to run this AI pipeline on your own machine? Follow these steps:
 
 **1. Clone the repository:**
-`git clone https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline.git`
-`cd Macro-Sentiment-Agentic-Pipeline`
+```bash
+git clone [https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline.git](https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline.git)
+cd Macro-Sentiment-Agentic-Pipeline
+```
 
-**2. Install the required tools:**
-`pip install -r requirements.txt`
+**2. Install the required dependencies:**
+```bash
+pip install -r requirements.txt
+```
 
 **3. Run the Backend Data Pipeline (Optional):**
-*(This will fetch new data and rebuild the local SQLite database)*
-`python pipeline.py`
+*This will fetch today's live news and rebuild the local SQLite database.*
+```bash
+python pipeline.py
+```
 
 **4. Launch the Streamlit Dashboard:**
-`streamlit run app.py`
+```bash
+streamlit run app.py
+```
