@@ -4,10 +4,12 @@ An end-to-end, automated data engineering pipeline and AI reasoning system that 
 
 ### 🌟 Enterprise-Grade Features
 * **🌐 Live Data Ingestion:** Automated nightly web scraping (DuckDuckGo Search) captures real-time global financial headlines to update the AI's short-term memory.
-* **🧠 Agentic RAG Architecture:** Utilizes Gemini 2.5 Flash to synthesize historical database anomalies with live web context via a custom UI.
-* **🤖 Zero-Maintenance Cron Jobs:** GitHub Actions handles Python dependency management, database overwrites, and LaTeX PDF compilation every night at midnight UTC without human intervention.
-* **🎛️ Live ML Inference Sandbox:** An interactive "What-If" UI caches a Random Forest model, allowing users to input custom VIX and sentiment metrics for real-time anomaly predictions.
-* **⏱️ Dynamic Time-Machine Filtering:** Interactive sliders allow users to slice historical market data and visualize specific economic events instantly.
+* **🤖 Multi-Agent AI Debate Framework:** Utilizes Gemini 2.5 Flash as a "Lead Portfolio Manager" that synthesizes inputs from web-scraping agents and quantitative data models to generate a final market verdict.
+* **🧠 Big Data MapReduce:** Processes thousands of historical crisis headlines to extract live "Trending Macro Themes" to identify global panics.
+* **🎯 Content-Based Recommender System:** Calculates algorithmic cosine similarity to instantly match current market conditions to the mathematically closest historical market crash.
+* **⚙️ Zero-Maintenance Cron Jobs:** GitHub Actions handles Python dependency management, database overwrites, and LaTeX PDF compilation every night at midnight UTC.
+* **🎛️ Live ML Inference Sandbox:** An interactive "What-If" UI caches a Random Forest model, allowing users to test custom VIX and sentiment metrics for real-time anomaly predictions.
+* **⏱️ Dynamic Time-Machine Filtering:** Interactive UI sliders allow users to dynamically slice historical market data and visualize specific economic events instantly.
 
 ## 🏗️ System Architecture
 
