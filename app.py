@@ -17,6 +17,7 @@ import alpaca_trade_api as tradeapi
 st.set_page_config(page_title="Macro-Sentiment System", layout="wide")
 st.title("📈 Autonomous Agentic Analyzer")
 
+# Force metric text to wrap appropriately on smaller displays
 st.markdown(
     """
     <style>
@@ -65,6 +66,7 @@ def fetch_from_db():
     engine = create_engine('sqlite:///macro_data.db')
     with engine.connect() as conn:
         try:
+            # Ensure the database contains the Agentic Memory column
             conn.execute(text("ALTER TABLE macro_data ADD COLUMN Agent_Report TEXT"))
             conn.commit()
         except:
@@ -150,6 +152,7 @@ with tab_overview:
         sim_regime = gmm_model.predict([[sim_vix, sim_sent]])[0]
         st.metric("Anomaly Probability", f"{sim_prob:.2f}%")
         
+        # Color psychology routing based on dynamic GMM outputs
         if sim_regime == 0:
             st.success("🟢 **Detected Market Regime:** Standard Trading")
         elif sim_regime == 1:
@@ -197,7 +200,6 @@ with tab_agents:
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
                     
-                    # THE RED TEAM DEBATE PROMPT
                     debate_prompt = f"""
                     You are orchestrating a hedge fund debate regarding the market anomaly on {selected_date_str}.
                     Data: Drop: {sample['Price_Change_Pct']:.2f}%, VIX: {sample['Volatility_VIX']:.2f}, Themes: {top_themes}. Context: "{web_context}"
@@ -228,7 +230,6 @@ with tab_agents:
                         col_act.metric("Determined Action", report['action'])
                         col_conf.metric("System Confidence", f"{report['confidence']}%")
 
-                        # ALGORITHMIC EXECUTION WEBHOOK
                         st.markdown("---")
                         st.subheader("🤖 Autonomous Execution Engine")
                         if report['action'] in ["BUY", "SELL"]:
@@ -253,7 +254,7 @@ with tab_agents:
                     except Exception as e:
                         st.error(f"🛑 AI Inference Error: {e}")
 
-# --- TAB 3: KNOWLEDGE GRAPH ---
+# --- TAB 3: KNOWLEDGE GRAPH WITH SIDE-BY-SIDE EXPLANATION ---
 with tab_graph:
     st.subheader("🕸️ Live Entity Knowledge Graph")
     st.write("Using LLMs to extract relational structures from unstructured financial news.")
@@ -263,7 +264,7 @@ with tab_graph:
             if not api_key:
                 st.warning("Please save your Gemini API Key.")
             else:
-                with st.spinner("Extracting Knowledge Graph..."):
+                with st.spinner("Extracting Knowledge Graph and Generating Explanation..."):
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     
@@ -271,31 +272,46 @@ with tab_graph:
                         ddg_results = DDGS().text(f"major global financial news on {selected_date_str}", max_results=3)
                         web_context = " ".join([res['body'] for res in ddg_results])
                         
+                        # Extract both the Mermaid.js graph syntax and a plain-English translation from the LLM
                         graph_prompt = f"""
                         Read this financial news context: "{web_context}"
                         Extract the 5 most important entities (like Federal Reserve, Tech Stocks, Inflation) and their relationships.
-                        Output ONLY raw Mermaid.js graph syntax. Start with 'graph TD;'. 
-                        Example format:
-                        graph TD;
-                        A[Federal Reserve] -->|Raised| B[Interest Rates];
+                        
+                        Respond ONLY with a valid JSON using this exact format:
+                        {{
+                            "mermaid_code": "Raw Mermaid.js graph syntax. Start with 'graph TD;'.",
+                            "explanation": "A 2-3 sentence plain-English explanation of the cause-and-effect loop happening in this graph, written for a non-technical manager."
+                        }}
                         """
                         graph_response = model.generate_content(graph_prompt)
-                        mermaid_code = graph_response.text.replace('```mermaid', '').replace('```', '').strip()
+                        raw_json = graph_response.text.replace('```json', '').replace('```', '').strip()
+                        graph_data = json.loads(raw_json)
                         
-                        st.components.v1.html(
-                            f"""
-                            <div class="mermaid">
-                            {mermaid_code}
-                            </div>
-                            <script type="module">
-                            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-                            mermaid.initialize({{ startOnLoad: true }});
-                            </script>
-                            """,
-                            height=400
-                        )
+                        mermaid_syntax = graph_data["mermaid_code"].replace('```mermaid', '').replace('```', '').strip()
+                        
+                        # Render a side-by-side layout: Mermaid graph (left) and AI Translation (right)
+                        col_graph, col_info = st.columns([2, 1])
+                        
+                        with col_graph:
+                            st.components.v1.html(
+                                f"""
+                                <div class="mermaid">
+                                {mermaid_syntax}
+                                </div>
+                                <script type="module">
+                                import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+                                mermaid.initialize({{ startOnLoad: true, theme: 'dark' }});
+                                </script>
+                                """,
+                                height=450
+                            )
+                            
+                        with col_info:
+                            st.info("💡 **How to Read This Graph**\n\nThe arrows represent cause-and-effect relationships extracted autonomously from raw news headlines on the date of the market anomaly.")
+                            st.success(f"🤖 **AI Translation:**\n\n{graph_data['explanation']}")
+                            
                     except Exception as e:
-                        st.error("Failed to map relationships.")
+                        st.error(f"Failed to map relationships. Check API limits or JSON formatting. Error: {e}")
 
 # --- TAB 4: TEXT-TO-SQL ---
 with tab_sql:
