@@ -51,7 +51,7 @@ fig.add_trace(go.Scatter(x=df_joined['Date'], y=df_joined['Price_Change_Pct'], n
 fig.add_trace(go.Scatter(x=df_joined['Date'], y=df_joined['Sentiment_Score'] * 5, name='FinBERT Sentiment', line=dict(color='green')))
 fig.add_trace(go.Scatter(x=df_anomalies['Date'], y=df_anomalies['Price_Change_Pct'], mode='markers', name='Anomalies', marker=dict(color='red', size=12)))
 
-fig.update_layout(xaxis_title="x", yaxis_title="y")
+fig.update_layout(xaxis_title="x", yaxis_title="y", xaxis=dict(type='category', nticks=15))
 st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("🤖 Agentic RAG: Deep Anomaly Breakdown")
