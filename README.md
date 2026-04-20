@@ -9,7 +9,7 @@ An end-to-end, automated data engineering pipeline and AI reasoning system that 
 * **🌐 Live Data Ingestion & Big Data MapReduce:** Automated nightly DuckDuckGo web scraping feeds real-time global headlines into a custom MapReduce algorithm to extract live "Trending Macro Themes" without human intervention.
 * **🎯 Content-Based Recommender System:** Calculates algorithmic cosine similarity to instantly match current market conditions to the mathematically closest historical market crash.
 * **⚙️ Zero-Maintenance CI/CD:** GitHub Actions handles Python dependency management, database overwrites, and nightly execution at midnight UTC.
-* * **⚖️ Red Team MoE Debate:** Implements a Mixture-of-Experts (MoE) prompting architecture where adversarial AI agents (Bull vs. Bear) debate historical anomalies before a Lead Judge synthesizes a final verdict.
+* **⚖️ Red Team MoE Debate:** Implements a Mixture-of-Experts (MoE) prompting architecture where adversarial AI agents (Bull vs. Bear) debate historical anomalies before a Lead Judge synthesizes a final verdict.
 * **💸 Autonomous Execution Webhook:** Closes the automation loop by hooking the Judge agent's verdict directly into the **Alpaca Trading API**, automatically executing live or paper SPY market orders based on AI risk assessments.
 * **🕸️ LLM Knowledge Graph Extraction:** Dynamically reads unstructured financial news web scrapes and autonomously generates interactive Entity-Relationship Knowledge Graphs (via Mermaid.js) to map macroeconomic domino effects.
 
