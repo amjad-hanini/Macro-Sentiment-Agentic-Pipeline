@@ -1,11 +1,13 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 import google.generativeai as genai
 from duckduckgo_search import DDGS
 import json
+import sqlite3
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.mixture import GaussianMixture
 from sklearn.metrics.pairwise import cosine_similarity
 
 st.set_page_config(page_title="Macro-Sentiment System", layout="wide")
@@ -33,16 +35,25 @@ with st.sidebar.form("api_form"):
     api_key = st.text_input("Paste your API Key here:", type="password")
     submit_key = st.form_submit_button("Save Key")
 
-# --- Success Feedback ---
 if submit_key:
     if api_key:
         st.sidebar.success("✅ Key Saved! Agents are ready to deploy.")
     else:
         st.sidebar.error("❌ Please paste a valid key first.")
 
-@st.cache_data
+# --- DATABASE INGESTION & MEMORY LOOP UPGRADE ---
+@st.cache_data(ttl=600)
 def fetch_from_db():
     engine = create_engine('sqlite:///macro_data.db')
+    
+    # AI Memory Loop: Ensure the DB has a column to save past AI reports
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE macro_data ADD COLUMN Agent_Report TEXT"))
+            conn.commit()
+        except:
+            pass # Column already exists
+            
     df = pd.read_sql('SELECT * FROM macro_data', engine)
     df['Date'] = pd.to_datetime(df['Date'])
     df = df.sort_values(by='Date').reset_index(drop=True) 
@@ -50,40 +61,43 @@ def fetch_from_db():
     return df, anomalies
 
 @st.cache_resource
-def train_live_model(df):
+def train_live_models(df):
     features = ['Volatility_VIX', 'Sentiment_Score']
     X = df[features]
-    y = df['Is_Anomaly']
+    
+    # 1. Supervised Model (Anomaly Predictor)
     rf = RandomForestClassifier(n_estimators=100, random_state=42)
-    rf.fit(X, y)
-    return rf
+    rf.fit(X, df['Is_Anomaly'])
+    
+    # 2. Unsupervised Model (GMM Market Regime Clustering)
+    gmm = GaussianMixture(n_components=3, random_state=42)
+    gmm.fit(X)
+    
+    return rf, gmm
 
-# --- BIG DATA FEATURE 1: Python MapReduce ---
+# --- BIG DATA FEATURE 1: Python MapReduce (No Punctuation Logic) ---
 @st.cache_data
 def run_mapreduce(anomalies_df):
-    # MAP PHASE: Split all text into lowercased words (No punctuation cleaning needed for this dataset)
     all_words = []
     stop_words = {"the", "and", "to", "of", "a", "in", "for", "is", "on", "that", "by", "this", "with", "i", "you", "it", "not", "or", "be", "are", "from", "at", "as"}
     
-    for text in anomalies_df['Combined_News'].dropna():
-        mapped_words = str(text).lower().split()
+    for text_val in anomalies_df['Combined_News'].dropna():
+        mapped_words = str(text_val).lower().split()
         all_words.extend([w for w in mapped_words if w not in stop_words and len(w) > 3])
         
-    # REDUCE PHASE: Count frequencies
     word_counts = {}
     for word in all_words:
         word_counts[word] = word_counts.get(word, 0) + 1
         
-    # Sort and return top 10
     sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:10]
     return pd.DataFrame(sorted_words, columns=['Macro Theme', 'Frequency'])
 
 try:
     df_joined, df_anomalies = fetch_from_db()
-    rf_model = train_live_model(df_joined)
+    rf_model, gmm_model = train_live_models(df_joined)
     trending_themes_df = run_mapreduce(df_anomalies)
 except Exception as e:
-    st.error("Database connection failed.")
+    st.error(f"Database connection failed: {e}")
     st.stop()
 
 # --- Time-Machine Filter ---
@@ -111,11 +125,18 @@ st.markdown("---")
 col_sandbox, col_mapreduce = st.columns(2)
 
 with col_sandbox:
-    st.subheader("🎛️ AI Sandbox")
+    st.subheader("🎛️ AI ML Sandbox")
     sim_vix = st.slider("Fake Volatility (VIX)", min_value=10.0, max_value=85.0, value=20.0, step=0.5)
     sim_sent = st.slider("Fake News Sentiment", min_value=-1.0, max_value=1.0, value=0.0, step=0.05)
+    
     sim_prob = rf_model.predict_proba([[sim_vix, sim_sent]])[0][1] * 100
-    st.metric("Live Anomaly Probability", f"{sim_prob:.2f}%")
+    sim_regime = gmm_model.predict([[sim_vix, sim_sent]])[0]
+    
+    regime_labels = {0: "Standard Trading", 1: "High Fear / Crisis", 2: "Correction Phase"}
+    
+    col_a, col_b = st.columns(2)
+    col_a.metric("Anomaly Probability", f"{sim_prob:.2f}%")
+    col_b.metric("Detected Market Regime", regime_labels.get(sim_regime, "Unknown"))
 
 with col_mapreduce:
     st.subheader("🗺️ MapReduce: Top Crisis Themes")
@@ -124,87 +145,125 @@ with col_mapreduce:
 st.markdown("---")
 
 # --- ORIGINAL AGENTIC RAG & BIG DATA RECOMMENDER ---
-st.subheader("🤖 Agentic RAG & Content-Based Recommender")
-if "saved_reports" not in st.session_state:
-    st.session_state.saved_reports = {}
-
+st.subheader("🤖 Agentic RAG & Multi-Agent Engine")
 if not filtered_anomalies.empty:
     selected_date_str = st.selectbox("Select Anomaly Date to Deploy Agents:", filtered_anomalies['Date'].dt.strftime('%Y-%m-%d').tolist())
     sample = df_anomalies[df_anomalies['Date'].dt.strftime('%Y-%m-%d') == selected_date_str].iloc[0]
     
-    # --- BIG DATA FEATURE 2: Content-Based Recommender ---
     features_for_sim = ['Volatility_VIX', 'Sentiment_Score', 'Price_Change_Pct']
     target_vector = [sample[features_for_sim].values]
     all_vectors = df_anomalies[features_for_sim].values
     similarities = cosine_similarity(target_vector, all_vectors)[0]
     
-    # Find the most similar date that is NOT the exact same date
     df_anomalies_sim = df_anomalies.copy()
     df_anomalies_sim['Similarity'] = similarities
     df_anomalies_sim = df_anomalies_sim[df_anomalies_sim['Date'] != sample['Date']]
     best_match = df_anomalies_sim.sort_values(by='Similarity', ascending=False).iloc[0]
     
-    st.info(f"💡 **Recommender System Output:** Based on algorithmic cosine similarity, market conditions on **{selected_date_str}** are a **{best_match['Similarity']*100:.1f}% match** to the historical anomaly on **{best_match['Date'].strftime('%Y-%m-%d')}**.")
+    st.info(f"💡 **Big Data Recommender:** Based on algorithmic cosine similarity, market conditions on **{selected_date_str}** are a **{best_match['Similarity']*100:.1f}% match** to the historical anomaly on **{best_match['Date'].strftime('%Y-%m-%d')}**.")
+
+    # --- AI MEMORY LOOP CHECK ---
+    if pd.notna(best_match.get('Agent_Report')) and best_match['Agent_Report'] != None:
+        with st.expander(f"🧠 View AI Memory Archive for {best_match['Date'].strftime('%Y-%m-%d')}"):
+            st.json(best_match['Agent_Report'])
 
     if st.button("Deploy Analysis Agents", type="primary"):
         if not api_key:
             st.warning("Please save your Gemini API Key in the sidebar.")
         else:
-            if selected_date_str in st.session_state.saved_reports:
-                report = st.session_state.saved_reports[selected_date_str]
-                st.success("Loaded from local memory! (No API quota used 🧠)")
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Primary Macro Theme", report['macro_theme'])
-                col2.metric("Hidden Risk Score", f"{report['risk_score']}/10")
-                col3.metric("VIX Volatility Level", f"{sample['Volatility_VIX']:.2f}")
-                st.write(f"**Quantitative Analyst:** {report['quant_analysis']}")
-                st.write(f"**Final Synthesized Report:** {report['synthesized_report']}")
-            else:
-                with st.spinner("Agent 1 (Researcher) is scraping the web..."):
-                    search_query = f"major global financial news on {selected_date_str}"
-                    try:
-                        ddg_results = DDGS().text(search_query, max_results=3)
-                        web_context = " ".join([res['body'] for res in ddg_results])
-                    except:
-                        web_context = "No additional web context could be retrieved."
+            with st.spinner("Agent 1 (Researcher) is scraping the web..."):
+                search_query = f"major global financial news on {selected_date_str}"
+                try:
+                    ddg_results = DDGS().text(search_query, max_results=3)
+                    web_context = " ".join([res['body'] for res in ddg_results])
+                except:
+                    web_context = "No additional web context could be retrieved."
 
-                with st.spinner("Agents 2 & 3 are analyzing database records and Big Data metrics..."):
-                    genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-2.5-flash')
+            with st.spinner("Agents 2 & 3 are analyzing Big Data metrics..."):
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel('gemini-2.5-flash')
+                top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
+                
+                system_prompt = f"""
+                You are a Lead Portfolio Manager. Synthesize findings regarding the market anomaly on {selected_date_str}.
+                Data:
+                - Drop: {sample['Price_Change_Pct']:.2f}%
+                - VIX: {sample['Volatility_VIX']:.2f}
+                - MapReduce Themes: {top_themes}
+                - Web Context: "{web_context}"
+                
+                Respond ONLY with a valid JSON using this EXACT strict format:
+                {{
+                    "macro_theme": "Max 3 words.",
+                    "risk_score": "Strictly an integer 1-10.",
+                    "quant_analysis": "One sentence acting as the Quant Agent.",
+                    "synthesized_report": "A short paragraph acting as Lead Manager."
+                }}
+                """
+                try:
+                    response = model.generate_content(system_prompt)
+                    raw_json = response.text.replace('```json', '').replace('```', '').strip()
+                    report = json.loads(raw_json)
                     
-                    top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
-                    
-                    system_prompt = f"""
-                    You are a Lead Portfolio Manager overseeing three specialist AI agents. Synthesize their findings regarding the market anomaly on {selected_date_str}.
-                    
-                    Data Inputs:
-                    - Market Drop: {sample['Price_Change_Pct']:.2f}%
-                    - Market Fear (VIX): {sample['Volatility_VIX']:.2f}
-                    - Big Data MapReduce Macro Themes: {top_themes}
-                    - Recommender System Match: {best_match['Similarity']*100:.1f}% similarity to the crash on {best_match['Date'].strftime('%Y-%m-%d')}
-                    - Live Web Scrape Context: "{web_context}"
-                    
-                    Synthesize this into a strict JSON format:
-                    {{
-                        "macro_theme": "Maximum 3 words summarizing the event.",
-                        "risk_score": "Strictly an integer 1-10.",
-                        "quant_analysis": "One sentence acting as the Quant Agent: Do the VIX and Recommender historical match justify this drop?",
-                        "synthesized_report": "A short paragraph acting as the Lead Manager: Combine the MapReduce trending themes, the historical context, and the web context into a final verdict."
-                    }}
-                    """
+                    # SAVE TO DB (The AI Memory Loop)
                     try:
-                        response = model.generate_content(system_prompt)
-                        raw_json = response.text.replace('```json', '').replace('```', '').strip()
-                        report = json.loads(raw_json)
-                        st.session_state.saved_reports[selected_date_str] = report
-                        
-                        col1, col2, col3 = st.columns(3)
-                        col1.metric("Primary Macro Theme", report['macro_theme'])
-                        col2.metric("Hidden Risk Score", f"{report['risk_score']}/10")
-                        col3.metric("VIX Volatility Level", f"{sample['Volatility_VIX']:.2f}")
-                        st.write(f"**Quantitative Analyst:** {report['quant_analysis']}")
-                        st.write(f"**Final Synthesized Report:** {report['synthesized_report']}")
-                    except Exception as e:
-                        st.error("🛑 Free Tier Speed Limit Reached or JSON Error Occurred.")
+                        conn = sqlite3.connect('macro_data.db')
+                        cursor = conn.cursor()
+                        cursor.execute("UPDATE macro_data SET Agent_Report = ? WHERE Date = ?", (raw_json, sample['Date'].strftime('%Y-%m-%d %H:%M:%S')))
+                        conn.commit()
+                        conn.close()
+                    except Exception as db_e:
+                        st.sidebar.warning("Could not cache to local memory.")
+
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("Primary Macro Theme", report['macro_theme'])
+                    col2.metric("Hidden Risk Score", f"{report['risk_score']}/10")
+                    col3.metric("VIX Volatility Level", f"{sample['Volatility_VIX']:.2f}")
+                    st.write(f"**Quantitative Analyst:** {report['quant_analysis']}")
+                    st.write(f"**Final Synthesized Report:** {report['synthesized_report']}")
+                except Exception as e:
+                    st.error("🛑 Free Tier Speed Limit Reached or JSON Error Occurred.")
 else:
     st.write("No anomalies detected in this time range.")
+
+# --- AGENTIC FEATURE: TEXT-TO-SQL CHATBOT ---
+st.markdown("---")
+st.subheader("🕵️‍♂️ Database Agent (Text-to-SQL)")
+st.write("Ask the AI to query your historical Big Data framework in plain English.")
+
+user_q = st.text_input("Ask a question (e.g., 'What was the highest VIX level in 2020?'):")
+if user_q:
+    if not api_key:
+        st.warning("API key required for the Database Agent.")
+    else:
+        with st.spinner("Translating natural language to SQL..."):
+            genai.configure(api_key=api_key)
+            sql_model = genai.GenerativeModel('gemini-2.5-flash')
+            
+            schema_prompt = f"""
+            You are a SQL Data Analyst. Given the user question, write a valid SQLite query.
+            Table name: `macro_data`
+            Columns: `Date` (TEXT YYYY-MM-DD HH:MM:SS), `Price_Change_Pct` (FLOAT), `Volatility_VIX` (FLOAT), `Sentiment_Score` (FLOAT), `Is_Anomaly` (INTEGER 0 or 1).
+            
+            Return ONLY the pure SQL string. Do not include markdown formatting or explanation.
+            
+            User Question: {user_q}
+            """
+            try:
+                sql_resp = sql_model.generate_content(schema_prompt)
+                raw_sql = sql_resp.text.replace('```sql', '').replace('```', '').strip()
+                
+                st.code(raw_sql, language="sql")
+                
+                # Execute the safe SQL
+                engine = create_engine('sqlite:///macro_data.db')
+                with engine.connect() as conn:
+                    result_df = pd.read_sql(text(raw_sql), conn)
+                
+                if not result_df.empty:
+                    st.dataframe(result_df, hide_index=True)
+                else:
+                    st.info("Query returned no results.")
+                    
+            except Exception as e:
+                st.error("Could not generate or execute the SQL query.")
