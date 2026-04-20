@@ -110,24 +110,20 @@ except Exception as e:
     st.stop()
 
 # ==========================================
-# 3. INTERACTIVE TIME-MACHINE FILTER
+# 3. GLOBAL CONTEXT SETUP
 # ==========================================
-st.sidebar.markdown("---")
-st.sidebar.markdown("### ⏱️ Time-Machine Filter")
-min_date = df_joined['Date'].min().date()
-max_date = df_joined['Date'].max().date()
-date_range = st.sidebar.slider("Select Historical Range:", min_date, max_date, (min_date, max_date))
-
-mask = (df_joined['Date'].dt.date >= date_range[0]) & (df_joined['Date'].dt.date <= date_range[1])
-filtered_df = df_joined.loc[mask]
-filtered_anomalies = df_anomalies.loc[(df_anomalies['Date'].dt.date >= date_range[0]) & (df_anomalies['Date'].dt.date <= date_range[1])]
+# Generate the list of dates for the dropdowns
+if not df_anomalies.empty:
+    anomaly_dates = df_anomalies['Date'].dt.strftime('%Y-%m-%d').tolist()
+else:
+    anomaly_dates = []
 
 # ==========================================
 # 4. FRONTEND UI: ENTERPRISE TABS
 # ==========================================
 tab_overview, tab_agents, tab_graph, tab_sql = st.tabs([
     "📊 Market Overview", 
-    "⚖️ Red Team Debate & Execution", 
+    "⚖️ AI Analyst Debate & Execution", 
     "🕸️ Knowledge Graph", 
     "🕵️‍♂️ Database Query"
 ])
@@ -135,6 +131,16 @@ tab_overview, tab_agents, tab_graph, tab_sql = st.tabs([
 # --- TAB 1: DATA VISUALIZATION ---
 with tab_overview:
     st.subheader("Market vs. Narrative Divergence")
+    
+    st.markdown("### ⏱️ Time-Machine Filter")
+    min_date = df_joined['Date'].min().date()
+    max_date = df_joined['Date'].max().date()
+    date_range = st.slider("Select Historical Range for the Chart:", min_date, max_date, (min_date, max_date))
+
+    mask = (df_joined['Date'].dt.date >= date_range[0]) & (df_joined['Date'].dt.date <= date_range[1])
+    filtered_df = df_joined.loc[mask]
+    filtered_anomalies = df_anomalies.loc[(df_anomalies['Date'].dt.date >= date_range[0]) & (df_anomalies['Date'].dt.date <= date_range[1])]
+
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=filtered_df['Date'].dt.strftime('%Y-%m-%d'), y=filtered_df['Price_Change_Pct'], name='DJIA % Change', line=dict(color='blue')))
     fig.add_trace(go.Scatter(x=filtered_df['Date'].dt.strftime('%Y-%m-%d'), y=filtered_df['Sentiment_Score'] * 5, name='FinBERT Sentiment', line=dict(color='green')))
@@ -171,26 +177,23 @@ with tab_overview:
             hide_index=True, use_container_width=True
         )
 
-# --- TAB 2 & 3 SHARED CONTEXT SETUP ---
-if not filtered_anomalies.empty:
-    selected_date_str = st.sidebar.selectbox("🎯 Target Anomaly Date:", filtered_anomalies['Date'].dt.strftime('%Y-%m-%d').tolist())
-    sample = df_anomalies[df_anomalies['Date'].dt.strftime('%Y-%m-%d') == selected_date_str].iloc[0]
-else:
-    selected_date_str = None
-
 # --- TAB 2: RED TEAM DEBATE & ALGORITHMIC TRADING ---
 with tab_agents:
-    st.subheader("⚖️ Mixture-of-Experts: Red Team Debate")
-    st.write("Orchestrating adversarial AI agents to debate market conditions before executing algorithmic trades.")
+    st.subheader("⚖️ AI Analysts: Market Debate")
+    st.write("Orchestrating AI agents to debate market conditions before executing algorithmic trades.")
     
-    if selected_date_str:
+    if anomaly_dates:
+        # Move selector directly into the main view
+        selected_date_str_tab2 = st.selectbox("🎯 Select Target Anomaly Date to Analyze:", anomaly_dates, key="tab2_date")
+        sample = df_anomalies[df_anomalies['Date'].dt.strftime('%Y-%m-%d') == selected_date_str_tab2].iloc[0]
+        
         if st.button("Initiate Multi-Agent Debate", type="primary"):
             if not api_key:
                 st.warning("Please save your Gemini API Key in the sidebar.")
             else:
                 with st.spinner("Agent 1 (Researcher) scraping intelligence..."):
                     try:
-                        ddg_results = DDGS().text(f"major global financial news on {selected_date_str}", max_results=3)
+                        ddg_results = DDGS().text(f"major global financial news on {selected_date_str_tab2}", max_results=3)
                         web_context = " ".join([res['body'] for res in ddg_results])
                     except:
                         web_context = "No web context retrieved."
@@ -201,14 +204,14 @@ with tab_agents:
                     top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
                     
                     debate_prompt = f"""
-                    You are orchestrating a hedge fund debate regarding the market anomaly on {selected_date_str}.
+                    You are orchestrating a hedge fund debate regarding the market anomaly on {selected_date_str_tab2}.
                     Data: Drop: {sample['Price_Change_Pct']:.2f}%, VIX: {sample['Volatility_VIX']:.2f}, Themes: {top_themes}. Context: "{web_context}"
                     
-                    Respond ONLY with a valid JSON:
+                    Respond ONLY with a valid JSON using plain English:
                     {{
-                        "bull_agent": "A strong 2-sentence argument on why this panic is an overreaction and a buying opportunity.",
-                        "bear_agent": "A strong 2-sentence argument on why this anomaly signals a systemic crash.",
-                        "judge_synthesis": "The Lead Manager's final verdict combining both arguments and the data.",
+                        "optimistic_view": "A strong 2-sentence argument on why this panic is an overreaction and a buying opportunity.",
+                        "pessimistic_view": "A strong 2-sentence argument on why this anomaly signals a systemic crash.",
+                        "executive_summary": "The Lead Manager's final executive summary combining both arguments and the data.",
                         "action": "BUY" or "SELL" or "HOLD",
                         "confidence": "Integer 1-100 representing certainty."
                     }}
@@ -220,11 +223,11 @@ with tab_agents:
                         
                         col_bull, col_bear = st.columns(2)
                         with col_bull:
-                            st.success(f"🐂 **Bull Agent Thesis:**\n\n{report['bull_agent']}")
+                            st.success(f"🟢 **Optimistic AI Analyst:**\n\n{report['optimistic_view']}")
                         with col_bear:
-                            st.error(f"🐻 **Bear Agent Thesis:**\n\n{report['bear_agent']}")
+                            st.error(f"🔴 **Pessimistic AI Analyst:**\n\n{report['pessimistic_view']}")
                             
-                        st.info(f"⚖️ **Lead Judge Synthesis:**\n\n{report['judge_synthesis']}")
+                        st.info(f"⚖️ **Final Executive Summary:**\n\n{report['executive_summary']}")
                         
                         col_act, col_conf = st.columns(2)
                         col_act.metric("Determined Action", report['action'])
@@ -259,20 +262,22 @@ with tab_graph:
     st.subheader("🕸️ Live Entity Knowledge Graph")
     st.write("Using LLMs to extract relational structures from unstructured financial news.")
     
-    if selected_date_str:
+    if anomaly_dates:
+        # Move selector directly into the main view
+        selected_date_str_tab3 = st.selectbox("🎯 Select Target Anomaly Date to Graph:", anomaly_dates, key="tab3_date")
+        
         if st.button("Generate Relational Graph"):
             if not api_key:
-                st.warning("Please save your Gemini API Key.")
+                st.warning("Please save your Gemini API Key in the sidebar.")
             else:
                 with st.spinner("Extracting Knowledge Graph and Generating Explanation..."):
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     
                     try:
-                        ddg_results = DDGS().text(f"major global financial news on {selected_date_str}", max_results=3)
+                        ddg_results = DDGS().text(f"major global financial news on {selected_date_str_tab3}", max_results=3)
                         web_context = " ".join([res['body'] for res in ddg_results])
                         
-                        # Extract both the Mermaid.js graph syntax and a plain-English translation from the LLM
                         graph_prompt = f"""
                         Read this financial news context: "{web_context}"
                         Extract the 5 most important entities (like Federal Reserve, Tech Stocks, Inflation) and their relationships.
@@ -289,7 +294,6 @@ with tab_graph:
                         
                         mermaid_syntax = graph_data["mermaid_code"].replace('```mermaid', '').replace('```', '').strip()
                         
-                        # Render a side-by-side layout: Mermaid graph (left) and AI Translation (right)
                         col_graph, col_info = st.columns([2, 1])
                         
                         with col_graph:
@@ -319,7 +323,7 @@ with tab_sql:
     user_q = st.text_input("Ask a question (e.g., 'What was the highest VIX level in 2020?'):")
     if user_q:
         if not api_key:
-            st.warning("API key required.")
+            st.warning("API key required in the sidebar.")
         else:
             with st.spinner("Translating..."):
                 genai.configure(api_key=api_key)
