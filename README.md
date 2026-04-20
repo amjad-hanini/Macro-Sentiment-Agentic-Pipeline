@@ -29,11 +29,21 @@ This project is built on four core pillars of modern data engineering and AI:
 
 ## 💻 Tech Stack
 * **Language:** Python 3.10
-* **Data & ML:** Pandas, Scikit-Learn, PyTorch, HuggingFace (FinBERT)
-* **LLM / Agents:** Google Gemini 2.5 Flash, DuckDuckGo Search API
+* **Machine Learning:** Scikit-Learn (Random Forest Classification, Gaussian Mixture Models, Cosine Similarity)
+* **NLP & LLMs:** HuggingFace (FinBERT), Google Gemini 2.5 Flash (Agentic RAG & Text-to-SQL)
+* **Big Data Processing:** Custom Python MapReduce Architecture 
+* **Data Ingestion:** DuckDuckGo Search API, `yfinance` (Yahoo Finance API)
 * **Database:** SQLite / PostgreSQL (via SQLAlchemy)
-* **Frontend:** Streamlit, Plotly
-* **DevOps:** GitHub Actions, LaTeX automation
+* **Frontend UI:** Streamlit, Plotly (Interactive Data Visualization)
+* **DevOps & CI/CD:** GitHub Actions (Automated Cron Jobs), Automated LaTeX PDF Compilation
+
+---
+
+## 🚀 Roadmap & Future Scaling
+While currently optimized for a standalone cloud environment, the architecture is designed to scale:
+* **Distributed Computing:** Migrate the custom MapReduce text-processing logic to **Apache PySpark** for multi-node cluster processing.
+* **Alternative Data:** Integrate live SEC Edgar filings and Twitter/X firehose APIs for deeper sentiment granularity.
+* **Live Execution:** Connect the final Agentic JSON outputs to a paper-trading API (like Alpaca) to test automated portfolio rebalancing.
 
 ## 💻 Local Quickstart & Development
 
