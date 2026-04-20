@@ -2,14 +2,13 @@
 
 An end-to-end, automated data engineering pipeline and AI reasoning system that detects, predicts, and explains divergences between macroeconomic reality and public news narratives.
 
-### 🌟 Enterprise-Grade Features
-* **🌐 Live Data Ingestion:** Automated nightly web scraping (DuckDuckGo Search) captures real-time global financial headlines to update the AI's short-term memory.
-* **🤖 Multi-Agent AI Debate Framework:** Utilizes Gemini 2.5 Flash as a "Lead Portfolio Manager" that synthesizes inputs from web-scraping agents and quantitative data models to generate a final market verdict.
-* **🧠 Big Data MapReduce:** Processes thousands of historical crisis headlines to extract live "Trending Macro Themes" to identify global panics.
+### 🌟 Enterprise-Grade Architecture
+* **🤖 Text-to-SQL Database Agent:** Integrates Gemini 2.5 Flash as an active query agent, allowing users to interrogate the historical SQLite database using natural language.
+* **🧠 Agentic Memory Loop:** The system permanently archives AI-generated crisis reports back into the database, allowing current agents to retrieve and learn from the conclusions of past agents during similar market regimes.
+* **📊 GMM Market Regime Clustering:** Utilizes Unsupervised Machine Learning (Gaussian Mixture Models) to dynamically cluster historical financial data into distinct market regimes (e.g., Standard Trading, High Fear/Crisis, Correction Phase) handling elliptical data overlap perfectly.
+* **🌐 Live Data Ingestion & Big Data MapReduce:** Automated nightly DuckDuckGo web scraping feeds real-time global headlines into a custom MapReduce algorithm to extract live "Trending Macro Themes" without human intervention.
 * **🎯 Content-Based Recommender System:** Calculates algorithmic cosine similarity to instantly match current market conditions to the mathematically closest historical market crash.
-* **⚙️ Zero-Maintenance Cron Jobs:** GitHub Actions handles Python dependency management, database overwrites, and LaTeX PDF compilation every night at midnight UTC.
-* **🎛️ Live ML Inference Sandbox:** An interactive "What-If" UI caches a Random Forest model, allowing users to test custom VIX and sentiment metrics for real-time anomaly predictions.
-* **⏱️ Dynamic Time-Machine Filtering:** Interactive UI sliders allow users to dynamically slice historical market data and visualize specific economic events instantly.
+* **⚙️ Zero-Maintenance CI/CD:** GitHub Actions handles Python dependency management, database overwrites, and nightly execution at midnight UTC.
 
 ## 🏗️ System Architecture
 
