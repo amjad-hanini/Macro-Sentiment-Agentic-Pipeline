@@ -341,13 +341,18 @@ with tab_sql:
                 try:
                     sql_resp = sql_model.generate_content(schema_prompt)
                     raw_sql = sql_resp.text.replace('```sql', '').replace('```', '').strip()
+                    
+                    st.markdown("**Generated SQL:**")
                     st.code(raw_sql, language="sql")
+                    
                     engine = create_engine('sqlite:///macro_data.db')
                     with engine.connect() as conn:
                         result_df = pd.read_sql(text(raw_sql), conn)
+                        
                     if not result_df.empty:
                         st.dataframe(result_df, hide_index=True)
                     else:
                         st.info("Query returned no results.")
                 except Exception as e:
-                    st.error("Could not generate query.")
+                    # EXPOSING THE TRUE ERROR MESSAGE HERE
+                    st.error(f"🛑 Crash Diagnostics: {e}")
