@@ -185,7 +185,6 @@ with tab_agents:
     st.write("Orchestrating AI agents to debate market conditions before executing algorithmic trades.")
     
     if anomaly_dates:
-        # Move selector directly into the main view
         selected_date_str_tab2 = st.selectbox("🎯 Select Target Anomaly Date to Analyze:", anomaly_dates, key="tab2_date")
         sample = df_anomalies[df_anomalies['Date'].dt.strftime('%Y-%m-%d') == selected_date_str_tab2].iloc[0]
         
@@ -196,68 +195,72 @@ with tab_agents:
                 with st.spinner("Agent 1 (Researcher) scraping intelligence..."):
                     try:
                         ddg_results = DDGS().text(f"major global financial news on {selected_date_str_tab2}", max_results=3)
-                        web_context = " ".join([res['body'] for res in ddg_results])
+                        web_context = " ".join([res.get('body', '') for res in ddg_results]) if ddg_results else ""
                     except:
-                        web_context = "No web context retrieved."
+                        web_context = ""
 
-                with st.spinner("Agents 2, 3 & 4 debating the data..."):
-                    genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-2.5-flash')
-                    top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
-                    
-                    debate_prompt = f"""
-                    You are orchestrating a hedge fund debate regarding the market anomaly on {selected_date_str_tab2}.
-                    Data: Drop: {sample['Price_Change_Pct']:.2f}%, VIX: {sample['Volatility_VIX']:.2f}, Themes: {top_themes}. Context: "{web_context}"
-                    
-                    Respond ONLY with a valid JSON using plain English:
-                    {{
-                        "optimistic_view": "A strong 2-sentence argument on why this panic is an overreaction and a buying opportunity.",
-                        "pessimistic_view": "A strong 2-sentence argument on why this anomaly signals a systemic crash.",
-                        "executive_summary": "The Lead Manager's final executive summary combining both arguments and the data.",
-                        "action": "BUY" or "SELL" or "HOLD",
-                        "confidence": "Integer 1-100 representing certainty."
-                    }}
-                    """
-                    try:
-                        response = model.generate_content(debate_prompt)
-                        raw_json = response.text.replace('```json', '').replace('```', '').strip()
-                        report = json.loads(raw_json)
+                # Safety Valve: Do not call Gemini if DuckDuckGo failed
+                if not web_context:
+                    st.error("🛑 DuckDuckGo Search failed to retrieve news for this date (Possible Rate Limit). Please wait a moment and try again.")
+                else:
+                    with st.spinner("Agents 2, 3 & 4 debating the data..."):
+                        genai.configure(api_key=api_key)
+                        model = genai.GenerativeModel('gemini-2.5-flash')
+                        top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
                         
-                        col_bull, col_bear = st.columns(2)
-                        with col_bull:
-                            st.success(f"🟢 **Optimistic AI Analyst:**\n\n{report['optimistic_view']}")
-                        with col_bear:
-                            st.error(f"🔴 **Pessimistic AI Analyst:**\n\n{report['pessimistic_view']}")
+                        debate_prompt = f"""
+                        You are orchestrating a hedge fund debate regarding the market anomaly on {selected_date_str_tab2}.
+                        Data: Drop: {sample['Price_Change_Pct']:.2f}%, VIX: {sample['Volatility_VIX']:.2f}, Themes: {top_themes}. Context: "{web_context}"
+                        
+                        Respond ONLY with a valid JSON using plain English:
+                        {{
+                            "optimistic_view": "A strong 2-sentence argument on why this panic is an overreaction and a buying opportunity.",
+                            "pessimistic_view": "A strong 2-sentence argument on why this anomaly signals a systemic crash.",
+                            "executive_summary": "The Lead Manager's final executive summary combining both arguments and the data.",
+                            "action": "BUY" or "SELL" or "HOLD",
+                            "confidence": "Integer 1-100 representing certainty."
+                        }}
+                        """
+                        try:
+                            response = model.generate_content(debate_prompt)
+                            raw_json = response.text.replace('```json', '').replace('```', '').strip()
+                            report = json.loads(raw_json)
                             
-                        st.info(f"⚖️ **Final Executive Summary:**\n\n{report['executive_summary']}")
-                        
-                        col_act, col_conf = st.columns(2)
-                        col_act.metric("Determined Action", report['action'])
-                        col_conf.metric("System Confidence", f"{report['confidence']}%")
+                            col_bull, col_bear = st.columns(2)
+                            with col_bull:
+                                st.success(f"🟢 **Optimistic AI Analyst:**\n\n{report['optimistic_view']}")
+                            with col_bear:
+                                st.error(f"🔴 **Pessimistic AI Analyst:**\n\n{report['pessimistic_view']}")
+                                
+                            st.info(f"⚖️ **Final Executive Summary:**\n\n{report['executive_summary']}")
+                            
+                            col_act, col_conf = st.columns(2)
+                            col_act.metric("Determined Action", report['action'])
+                            col_conf.metric("System Confidence", f"{report['confidence']}%")
 
-                        st.markdown("---")
-                        st.subheader("🤖 Autonomous Execution Engine")
-                        if report['action'] in ["BUY", "SELL"]:
-                            if alpaca_key and alpaca_secret:
-                                try:
-                                    api = tradeapi.REST(alpaca_key, alpaca_secret, base_url='https://paper-api.alpaca.markets')
-                                    order = api.submit_order(
-                                        symbol='SPY',
-                                        qty=1,
-                                        side=report['action'].lower(),
-                                        type='market',
-                                        time_in_force='gtc'
-                                    )
-                                    st.success(f"✅ **Trade Executed!** Successfully submitted a {report['action']} order for 1 share of SPY via Alpaca.")
-                                except Exception as trade_e:
-                                    st.error(f"❌ Execution Failed. Verify your Alpaca keys. Error: {trade_e}")
+                            st.markdown("---")
+                            st.subheader("🤖 Autonomous Execution Engine")
+                            if report['action'] in ["BUY", "SELL"]:
+                                if alpaca_key and alpaca_secret:
+                                    try:
+                                        api = tradeapi.REST(alpaca_key, alpaca_secret, base_url='https://paper-api.alpaca.markets')
+                                        order = api.submit_order(
+                                            symbol='SPY',
+                                            qty=1,
+                                            side=report['action'].lower(),
+                                            type='market',
+                                            time_in_force='gtc'
+                                        )
+                                        st.success(f"✅ **Trade Executed!** Successfully submitted a {report['action']} order for 1 share of SPY via Alpaca.")
+                                    except Exception as trade_e:
+                                        st.error(f"❌ Execution Failed. Verify your Alpaca keys. Error: {trade_e}")
+                                else:
+                                    st.warning(f"⚠️ The AI recommended a {report['action']} order, but the Trading Webhook is disabled (Missing Alpaca Keys).")
                             else:
-                                st.warning(f"⚠️ The AI recommended a {report['action']} order, but the Trading Webhook is disabled (Missing Alpaca Keys).")
-                        else:
-                            st.write("⏸️ The AI recommended a HOLD. No algorithmic trades executed.")
-                            
-                    except Exception as e:
-                        st.error(f"🛑 AI Inference Error: {e}")
+                                st.write("⏸️ The AI recommended a HOLD. No algorithmic trades executed.")
+                                
+                        except Exception as e:
+                            st.error(f"🛑 AI Inference Error: {e}")
 
 # --- TAB 3: KNOWLEDGE GRAPH WITH SIDE-BY-SIDE EXPLANATION ---
 with tab_graph:
@@ -265,7 +268,6 @@ with tab_graph:
     st.write("Using LLMs to extract relational structures from unstructured financial news.")
     
     if anomaly_dates:
-        # Move selector directly into the main view
         selected_date_str_tab3 = st.selectbox("🎯 Select Target Anomaly Date to Graph:", anomaly_dates, key="tab3_date")
         
         if st.button("Generate Relational Graph"):
@@ -273,51 +275,58 @@ with tab_graph:
                 st.warning("Please save your Gemini API Key in the sidebar.")
             else:
                 with st.spinner("Extracting Knowledge Graph and Generating Explanation..."):
-                    genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-2.5-flash')
-                    
                     try:
                         ddg_results = DDGS().text(f"major global financial news on {selected_date_str_tab3}", max_results=3)
-                        web_context = " ".join([res['body'] for res in ddg_results])
+                        web_context = " ".join([res.get('body', '') for res in ddg_results]) if ddg_results else ""
+                    except:
+                        web_context = ""
+
+                    # Safety Valve: Do not call Gemini if DuckDuckGo failed
+                    if not web_context:
+                        st.error("🛑 DuckDuckGo Search failed to retrieve news for this date (Possible Rate Limit). Please wait a moment and try again.")
+                    else:
+                        genai.configure(api_key=api_key)
+                        model = genai.GenerativeModel('gemini-2.5-flash')
                         
-                        graph_prompt = f"""
-                        Read this financial news context: "{web_context}"
-                        Extract the 5 most important entities (like Federal Reserve, Tech Stocks, Inflation) and their relationships.
-                        
-                        Respond ONLY with a valid JSON using this exact format:
-                        {{
-                            "mermaid_code": "Raw Mermaid.js graph syntax. Start with 'graph TD;'.",
-                            "explanation": "A 2-3 sentence plain-English explanation of the cause-and-effect loop happening in this graph, written for a non-technical manager."
-                        }}
-                        """
-                        graph_response = model.generate_content(graph_prompt)
-                        raw_json = graph_response.text.replace('```json', '').replace('```', '').strip()
-                        graph_data = json.loads(raw_json)
-                        
-                        mermaid_syntax = graph_data["mermaid_code"].replace('```mermaid', '').replace('```', '').strip()
-                        
-                        col_graph, col_info = st.columns([2, 1])
-                        
-                        with col_graph:
-                            st.components.v1.html(
-                                f"""
-                                <div class="mermaid">
-                                {mermaid_syntax}
-                                </div>
-                                <script type="module">
-                                import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-                                mermaid.initialize({{ startOnLoad: true, theme: 'dark' }});
-                                </script>
-                                """,
-                                height=450
-                            )
+                        try:
+                            graph_prompt = f"""
+                            Read this financial news context: "{web_context}"
+                            Extract the 5 most important entities (like Federal Reserve, Tech Stocks, Inflation) and their relationships.
                             
-                        with col_info:
-                            st.info("💡 **How to Read This Graph**\n\nThe arrows represent cause-and-effect relationships extracted autonomously from raw news headlines on the date of the market anomaly.")
-                            st.success(f"🤖 **AI Translation:**\n\n{graph_data['explanation']}")
+                            Respond ONLY with a valid JSON using this exact format:
+                            {{
+                                "mermaid_code": "Raw Mermaid.js graph syntax. Start with 'graph TD;'.",
+                                "explanation": "A 2-3 sentence plain-English explanation of the cause-and-effect loop happening in this graph, written for a non-technical manager."
+                            }}
+                            """
+                            graph_response = model.generate_content(graph_prompt)
+                            raw_json = graph_response.text.replace('```json', '').replace('```', '').strip()
+                            graph_data = json.loads(raw_json)
                             
-                    except Exception as e:
-                        st.error(f"Failed to map relationships. Check API limits or JSON formatting. Error: {e}")
+                            mermaid_syntax = graph_data["mermaid_code"].replace('```mermaid', '').replace('```', '').strip()
+                            
+                            col_graph, col_info = st.columns([2, 1])
+                            
+                            with col_graph:
+                                st.components.v1.html(
+                                    f"""
+                                    <div class="mermaid">
+                                    {mermaid_syntax}
+                                    </div>
+                                    <script type="module">
+                                    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+                                    mermaid.initialize({{ startOnLoad: true, theme: 'dark' }});
+                                    </script>
+                                    """,
+                                    height=450
+                                )
+                                
+                            with col_info:
+                                st.info("💡 **How to Read This Graph**\n\nThe arrows represent cause-and-effect relationships extracted autonomously from raw news headlines on the date of the market anomaly.")
+                                st.success(f"🤖 **AI Translation:**\n\n{graph_data['explanation']}")
+                                
+                        except Exception as e:
+                            st.error(f"Failed to map relationships. Check API limits or JSON formatting. Error: {e}")
 
 # --- TAB 4: TEXT-TO-SQL ---
 with tab_sql:
