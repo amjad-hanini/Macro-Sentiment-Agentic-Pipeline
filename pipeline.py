@@ -136,7 +136,9 @@ def generate_latex_report(db_path='macro_data.db'):
         vix = latest['Volatility_VIX']
         sentiment = latest['Sentiment_Score']
         price_change = latest['Price_Change_Pct']
-        anomaly_status = "Detected 🔴" if latest['Is_Anomaly'] == 1 else "Normal 🟢"
+        
+        # REMOVED EMOJIS TO PREVENT LATEX EXIT CODE 12 CRASH
+        anomaly_status = "CRISIS DETECTED" if latest['Is_Anomaly'] == 1 else "STANDARD REGIME"
         
         conn.close()
     except Exception as e:
@@ -173,10 +175,10 @@ def generate_latex_report(db_path='macro_data.db'):
         f.write(latex_content)
         
     try:
-        subprocess.run(["pdflatex", "report.tex"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        print("✅ Dynamic PDF Report Generated Successfully.")
+        subprocess.run(["pdflatex", "final_report.tex"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print("Dynamic PDF Report Generated Successfully.")
     except Exception as e:
-        print(f"❌ LaTeX Compilation Failed. Make sure pdflatex is installed on the server: {e}")
+        print(f"LaTeX Compilation Failed: {e}")
 
 if __name__ == "__main__":
     build_database()
