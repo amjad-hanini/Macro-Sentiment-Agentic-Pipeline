@@ -18,7 +18,7 @@ st.set_page_config(page_title="Macro-Sentiment System", layout="wide")
 st.title("📈 Autonomous Agentic Analyzer")
 
 # HIGH-VISIBILITY LEGAL DISCLAIMER (Moved from Sidebar)
-st.warning("**⚠️ Legal Disclaimer:** This system is for **educational and research purposes only**. The AI predictions, risk scores, and autonomous executions are simulated models and do not constitute financial advice. Algorithmic trading carries significant financial risk.", icon="⚠️")
+st.warning("** Legal Disclaimer:** This system is for **educational and research purposes only**. The AI predictions, risk scores, and autonomous executions are simulated models and do not constitute financial advice. Algorithmic trading carries significant financial risk.", icon="⚠️")
 
 # Force metric text to wrap appropriately on smaller displays
 st.markdown(
