@@ -18,7 +18,7 @@ st.set_page_config(page_title="Macro-Sentiment System", layout="wide")
 st.title("📈 Autonomous Agentic Analyzer")
 
 # HIGH-VISIBILITY LEGAL DISCLAIMER (Moved from Sidebar)
-st.warning("** Legal Disclaimer:** This system is for **educational and research purposes only**. The AI predictions, risk scores, and autonomous executions are simulated models and do not constitute financial advice. Algorithmic trading carries significant financial risk.", icon="⚠️")
+st.warning("**⚠️ Legal Disclaimer:** This system is for **educational and research purposes only**. The AI predictions, risk scores, and autonomous executions are simulated models and do not constitute financial advice. Algorithmic trading carries significant financial risk.", icon="⚠️")
 
 # Force metric text to wrap appropriately on smaller displays
 st.markdown(
@@ -88,13 +88,19 @@ def train_live_models(df):
 @st.cache_data
 def run_mapreduce(anomalies_df):
     all_words = []
-    stop_words = {"the", "and", "to", "of", "a", "in", "for", "is", "on", "that", "by", "this", "with", "i", "you", "it", "not", "or", "be", "are", "from", "at", "as"}
+    # UPDATED: Added the synthetic template glue words to the exclusion list
+    stop_words = {"the", "and", "to", "of", "a", "in", "for", "is", "on", "that", "by", "this", "with", "i", "you", "it", "not", "or", "be", "are", "from", "at", "as", "how", "will", "affect", "impacting", "analysts", "closely", "monitor"}
+    
     for text_val in anomalies_df['Combined_News'].dropna():
-        mapped_words = str(text_val).lower().split()
+        # UPDATED: Strip out punctuation before splitting the string into words
+        clean_text = str(text_val).lower().replace('.', '').replace(',', '').replace('"', '')
+        mapped_words = clean_text.split()
         all_words.extend([w for w in mapped_words if w not in stop_words and len(w) > 3])
+        
     word_counts = {}
     for word in all_words:
         word_counts[word] = word_counts.get(word, 0) + 1
+        
     sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:10]
     return pd.DataFrame(sorted_words, columns=['Macro Theme', 'Frequency'])
 
@@ -155,7 +161,6 @@ with tab_overview:
         sim_regime = gmm_model.predict([[sim_vix, sim_sent]])[0]
         st.metric("Anomaly Probability", f"{sim_prob:.2f}%")
         
-        # Color psychology routing based on dynamic GMM outputs
         if sim_regime == 0:
             st.success("🟢 **Detected Market Regime:** Standard Trading")
         elif sim_regime == 1:
@@ -194,7 +199,6 @@ with tab_agents:
                     except:
                         web_context = ""
 
-                # Safety Valve: Do not call Gemini if DuckDuckGo failed
                 if not web_context:
                     st.error("🛑 DuckDuckGo Search failed to retrieve news for this date (Possible Rate Limit). Please wait a moment and try again.")
                 else:
@@ -276,7 +280,6 @@ with tab_graph:
                     except:
                         web_context = ""
 
-                    # Safety Valve: Do not call Gemini if DuckDuckGo failed
                     if not web_context:
                         st.error("🛑 DuckDuckGo Search failed to retrieve news for this date (Possible Rate Limit). Please wait a moment and try again.")
                     else:
