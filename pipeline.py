@@ -169,7 +169,7 @@ def generate_latex_report(db_path='macro_data.db'):
     \\end{{document}}
     """
     
-    with open("report.tex", "w") as f:
+    with open("final_report.tex", "w") as f:
         f.write(latex_content)
         
     try:
