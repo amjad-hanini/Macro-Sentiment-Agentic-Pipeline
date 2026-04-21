@@ -57,7 +57,8 @@ if submit_alpaca and alpaca_key and alpaca_secret:
 # ==========================================
 # 2. DATA INGESTION & MACHINE LEARNING
 # ==========================================
-@st.cache_data(ttl=600)
+# REDUCED CACHE TO 60 SECONDS SO THE TABLE UPDATES FASTER
+@st.cache_data(ttl=60)
 def fetch_from_db():
     engine = create_engine('sqlite:///macro_data.db')
     with engine.connect() as conn:
