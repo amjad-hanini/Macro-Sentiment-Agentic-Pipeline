@@ -1,6 +1,7 @@
 import yfinance as yf
 import pandas as pd
 import sqlite3
+import random
 from datetime import datetime, timedelta
 from transformers import pipeline
 import subprocess
@@ -14,15 +15,12 @@ def fetch_market_data():
     Dynamically fetches market data from Yahoo Finance up to the current day.
     Calculates the daily percentage change of the DJIA and extracts the VIX fear gauge.
     """
-    # Dynamically set dates so the nightly CRON job always pulls fresh data
     end_date = datetime.today().strftime('%Y-%m-%d')
-    start_date = '2020-01-01'
+    start_date = '2014-01-01'
     
-    # Download Dow Jones Industrial Average (DJIA) and Volatility Index (VIX)
     djia = yf.download('^DJI', start=start_date, end=end_date)
     vix = yf.download('^VIX', start=start_date, end=end_date)
     
-    # Clean and structure the market dataframe
     df = pd.DataFrame(index=djia.index)
     df['Price_Change_Pct'] = djia['Close'].pct_change() * 100
     df['Volatility_VIX'] = vix['Close']
@@ -32,14 +30,27 @@ def fetch_market_data():
 
 def fetch_news_data(dates):
     """
-    Placeholder for the news ingestion logic. 
-    In production, this queries the DuckDuckGo/Reddit API for global headlines.
+    Simulates global macroeconomic headlines for portfolio demonstration.
+    In a true production environment, this connects to a paid firehose API.
     """
-    # NOTE: Keep your actual news scraping logic here!
-    # For pipeline integrity, we ensure it returns a DataFrame with 'Date' and 'Combined_News'
+    # Pools of realistic financial terminology
+    subjects = ["Federal Reserve", "Inflation", "Tech stocks", "Oil prices", "Treasury yields", "Consumer spending", "Geopolitical tensions", "Supply chains", "Housing market", "Unemployment data"]
+    verbs = ["surge", "plummet", "stabilize", "trigger selloff", "rally", "collapse", "spark panic", "boost confidence", "signal recession", "exceed expectations"]
+    impacts = ["global markets", "investor sentiment", "future rate cuts", "corporate earnings", "emerging economies"]
+    
+    headlines = []
+    # Seed the randomizer so the database builds consistently
+    random.seed(42) 
+    
+    for _ in dates:
+        # Create a synthetic daily news summary mimicking real financial reporting
+        h1 = f"{random.choice(subjects)} {random.choice(verbs)} impacting {random.choice(impacts)}."
+        h2 = f"Analysts closely monitor how {random.choice(subjects)} will affect {random.choice(impacts)}."
+        headlines.append(f"{h1} {h2}")
+        
     news_df = pd.DataFrame({
         'Date': dates,
-        'Combined_News': ["Sample macroeconomic headline regarding interest rates and global panic."] * len(dates)
+        'Combined_News': headlines
     })
     return news_df
 
@@ -52,15 +63,12 @@ def score_sentiment(texts):
     Utilizes HuggingFace's FinBERT NLP model to analyze the macroeconomic
     sentiment of the combined daily news headlines.
     """
-    # Load the specialized financial sentiment analyzer
     sentiment_analyzer = pipeline("sentiment-analysis", model="ProsusAI/finbert")
     scores = []
     
     for text in texts:
         try:
-            # Truncate text to fit BERT's 512 token limit
             result = sentiment_analyzer(str(text)[:512])[0]
-            # Convert label to a numerical score for correlation modeling
             if result['label'] == 'positive':
                 scores.append(result['score'])
             elif result['label'] == 'negative':
@@ -83,30 +91,22 @@ def build_database():
     """
     print("Initiating Nightly Enterprise Data Pipeline...")
     
-    # 1. Fetch raw data
     market_df = fetch_market_data()
     news_df = fetch_news_data(market_df['Date'])
     
-    # 2. Merge and Transform
     joined = pd.merge(market_df, news_df, on='Date')
     joined['Sentiment_Score'] = score_sentiment(joined['Combined_News'].tolist())
     
-    # 3. Anomaly Detection (Rule-based flag for the downstream ML models)
     joined['Is_Anomaly'] = ((joined['Price_Change_Pct'] < -2.0) | (joined['Volatility_VIX'] > 30.0)).astype(int)
     
-    # 4. Agentic Memory Preservation (CRITICAL FIX)
     conn = sqlite3.connect('macro_data.db')
     try:
-        # Attempt to read the existing database to extract previously saved AI reports
         old_db = pd.read_sql('SELECT Date, Agent_Report FROM macro_data WHERE Agent_Report IS NOT NULL', conn)
         old_db['Date'] = pd.to_datetime(old_db['Date'])
-        # Merge the old reports onto the fresh dataset
         joined = pd.merge(joined, old_db, on='Date', how='left')
     except:
-        # If the database or column doesn't exist yet, initialize it cleanly
         joined['Agent_Report'] = None
         
-    # 5. Load to Database
     joined.to_sql('macro_data', conn, if_exists='replace', index=False)
     conn.close()
     print("Pipeline Execution Complete. Database successfully updated.")
@@ -122,7 +122,6 @@ def generate_latex_report(db_path='macro_data.db'):
     """
     try:
         conn = sqlite3.connect(db_path)
-        # Fetch the most recent date's row
         df = pd.read_sql('SELECT * FROM macro_data ORDER BY Date DESC LIMIT 1', conn)
         
         if df.empty:
@@ -131,7 +130,6 @@ def generate_latex_report(db_path='macro_data.db'):
             
         latest = df.iloc[0]
         
-        # Format the date nicely for the report
         raw_date = pd.to_datetime(latest['Date'])
         latest_date = raw_date.strftime('%B %d, %Y')
         
@@ -145,7 +143,6 @@ def generate_latex_report(db_path='macro_data.db'):
         print(f"Error fetching data for report: {e}")
         return
 
-    # Inject the dynamic variables directly into the LaTeX template
     latex_content = f"""
     \\documentclass{{article}}
     \\usepackage[margin=1in]{{geometry}}
@@ -172,7 +169,6 @@ def generate_latex_report(db_path='macro_data.db'):
     \\end{{document}}
     """
     
-    # Save and compile the PDF
     with open("report.tex", "w") as f:
         f.write(latex_content)
         
