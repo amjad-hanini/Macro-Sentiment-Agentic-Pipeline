@@ -17,6 +17,9 @@ import alpaca_trade_api as tradeapi
 st.set_page_config(page_title="Macro-Sentiment System", layout="wide")
 st.title("📈 Autonomous Agentic Analyzer")
 
+# HIGH-VISIBILITY LEGAL DISCLAIMER (Moved from Sidebar)
+st.warning("**⚠️ Legal Disclaimer:** This system is for **educational and research purposes only**. The AI predictions, risk scores, and autonomous executions are simulated models and do not constitute financial advice. Algorithmic trading carries significant financial risk.", icon="⚠️")
+
 # Force metric text to wrap appropriately on smaller displays
 st.markdown(
     """
@@ -50,15 +53,6 @@ with st.sidebar.form("alpaca_form"):
 
 if submit_alpaca and alpaca_key and alpaca_secret:
     st.sidebar.success("✅ Trading Webhook Armed.")
-
-# --- DISCLAIMER FOOTER ---
-st.sidebar.markdown("---")
-st.sidebar.markdown("### ⚠️ Legal Disclaimer")
-st.sidebar.caption(
-    "This system is for **educational and research purposes only**. "
-    "The AI predictions, risk scores, and autonomous executions are simulated models and do not constitute financial advice. "
-    "Algorithmic trading carries significant financial risk."
-)
 
 # ==========================================
 # 2. DATA INGESTION & MACHINE LEARNING
