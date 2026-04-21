@@ -56,7 +56,7 @@ jobs:
           git config --global user.email "bot@users.noreply.github.com"
           
           # Stages the freshly updated database and PDF report
-          git add macro_data.db final_report.pdf
+          git add -f macro_data.db final_report.pdf
           
           # SAFETY CHECK: Only commits and pushes IF the database or PDF actually changed.
           # This prevents the pipeline from crashing on weekends when the stock market is closed.
