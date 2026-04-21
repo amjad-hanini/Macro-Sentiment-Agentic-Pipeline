@@ -1,6 +1,6 @@
 # 📈 Autonomous Macro-Sentiment Agentic Pipeline
 
-An end-to-end, automated data engineering pipeline and AI reasoning system that detects, predicts, and explains divergences between macroeconomic reality and public news narratives.
+An autonomous, multi-agent AI pipeline that synthesizes macro volatility and NLP sentiment to predict market anomalies, orchestrate MoE analyst debates, and execute algorithmic trades.
 
 ### 🌟 Enterprise-Grade Architecture
 * **🤖 Text-to-SQL Database Agent:** Integrates Gemini 2.5 Flash as an active query agent, allowing users to interrogate the historical SQLite database using natural language.
@@ -9,7 +9,7 @@ An end-to-end, automated data engineering pipeline and AI reasoning system that 
 * **🌐 Live Data Ingestion & Big Data MapReduce:** Automated nightly DuckDuckGo web scraping feeds real-time global headlines into a custom MapReduce algorithm to extract live "Trending Macro Themes" without human intervention.
 * **🎯 Content-Based Recommender System:** Calculates algorithmic cosine similarity to instantly match current market conditions to the mathematically closest historical market crash.
 * **⚙️ Zero-Maintenance CI/CD:** GitHub Actions handles Python dependency management, database overwrites, and nightly execution at midnight UTC.
-* **⚖️ Red Team MoE Debate:** Implements a Mixture-of-Experts (MoE) prompting architecture where adversarial AI agents (Bull vs. Bear) debate historical anomalies before a Lead Judge synthesizes a final verdict.
+* **⚖️ Red Team MoE Debate:** Implements a Mixture-of-Experts (MoE) prompting architecture where adversarial AI agents (Optimistic vs. Pessimistic) debate historical anomalies before a Lead Judge synthesizes a final verdict.
 * **💸 Autonomous Execution Webhook:** Closes the automation loop by hooking the Judge agent's verdict directly into the **Alpaca Trading API**, automatically executing live or paper SPY market orders based on AI risk assessments.
 * **🕸️ LLM Knowledge Graph Extraction:** Dynamically reads unstructured financial news web scrapes and autonomously generates interactive Entity-Relationship Knowledge Graphs (via Mermaid.js) to map macroeconomic domino effects.
 
@@ -96,7 +96,7 @@ If you use this work in academic research, please cite:
       note={Available at: https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline}
     }
 
-> **Reminder:** This project is for educational and research purposes only. It does not constitute investment advice and is not produced in any broker-dealer or investment advisory capacity. See the full disclaimer in the research report.
+> **Reminder:** This project is for educational and research purposes only. It does not constitute investment advice and is not produced in any broker-dealer or investment advisory capacity. The creators are not liable for any financial losses incurred from using this system.
 
 ## 👨‍💻 Author
 **Amjad Hanini**
