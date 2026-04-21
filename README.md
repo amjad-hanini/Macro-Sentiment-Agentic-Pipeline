@@ -98,6 +98,13 @@ If you use this work in academic research, please cite:
 
 > **Reminder:** This project is for educational and research purposes only. It does not constitute investment advice and is not produced in any broker-dealer or investment advisory capacity. The creators are not liable for any financial losses incurred from using this system.
 
-## 👨‍💻 Author
+## 👨‍💻 Authors
+
 **Amjad Hanini**
 * GitHub: [@amjad-hanini](https://github.com/amjad-hanini)
+
+**Brandon DaSilva**
+* GitHub: [@BDaSilva03](https://github.com/BDaSilva03)    
+
+**Anushree Khopkar**
+* GitHub: [@Anushree-Khopkar](https://github.com/Anushree-Khopkar)
