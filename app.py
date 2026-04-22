@@ -178,6 +178,7 @@ with tab_agents:
     st.write("Orchestrating AI agents to debate market conditions before executing algorithmic trades.")
     
     if anomaly_dates:
+        # THE FIX: Timeline scrubber for Tab 2
         selected_date_str_tab2 = st.select_slider("🎯 Select Target Anomaly Date to Analyze:", options=anomaly_dates, key="tab2_date")
         sample = df_anomalies[df_anomalies['Date'].dt.strftime('%Y-%m-%d') == selected_date_str_tab2].iloc[0]
         
@@ -280,6 +281,7 @@ with tab_graph:
     st.write("Using LLMs to extract relational structures from historical financial news.")
     
     if anomaly_dates:
+        # THE FIX: Timeline scrubber for Tab 3
         selected_date_str_tab3 = st.select_slider("🎯 Select Target Anomaly Date to Graph:", options=anomaly_dates, key="tab3_date")
         
         if st.button("Generate Relational Graph"):
