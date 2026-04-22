@@ -186,18 +186,11 @@ with tab_agents:
         selected_date_str_tab2 = st.selectbox("🎯 Select Target Anomaly Date to Analyze:", anomaly_dates, key="tab2_date")
         sample = df_anomalies[df_anomalies['Date'].dt.strftime('%Y-%m-%d') == selected_date_str_tab2].iloc[0]
         
-        # --- SESSION STATE INITIALIZATION FOR PORTFOLIO DEMO ---
-        if "debate" not in st.session_state:
-            st.session_state.debate = {
-                "optimistic_view": "While volatility has spiked dramatically, historical data indicates that institutional algorithms are overreacting to headline noise. This presents a high-upside buying opportunity for undervalued assets.",
-                "pessimistic_view": "The velocity of this market drop, combined with compounding global supply chain failures, signals the beginning of a prolonged systemic recession rather than a temporary technical correction.",
-                "executive_summary": "The anomaly is driven by valid macroeconomic panic, and while central bank intervention is probable, the immediate downside risk is immense. Capital preservation must be the priority until volatility stabilizes.",
-                "action": "HOLD",
-                "confidence": 88,
-                "is_demo": True
-            }
+        # We start with a blank state instead of fake data
+        if "live_report" not in st.session_state:
+            st.session_state.live_report = None
 
-        if st.button("Initiate Live Multi-Agent Debate", type="primary"):
+        if st.button("Initiate Multi-Agent Debate", type="primary"):
             if not api_key:
                 st.warning("Please save your Gemini API Key in the sidebar to run live inferences.")
             else:
@@ -209,7 +202,7 @@ with tab_agents:
                         web_context = ""
 
                 if not web_context:
-                    st.error("🛑 DuckDuckGo Search failed to retrieve news for this date. Please wait a moment and try again.")
+                    st.error("🛑 DuckDuckGo Search failed to retrieve news for this date (Possible Rate Limit). Please wait a moment and try again.")
                 else:
                     with st.spinner("Agents 2, 3 & 4 debating the data..."):
                         genai.configure(api_key=api_key)
@@ -232,41 +225,46 @@ with tab_agents:
                         try:
                             response = model.generate_content(debate_prompt)
                             raw_json = response.text.replace('```json', '').replace('```', '').strip()
-                            report = json.loads(raw_json)
-                            # Overwrite the demo state with the live data
-                            report["is_demo"] = False
-                            st.session_state.debate = report
+                            st.session_state.live_report = json.loads(raw_json)
                         except Exception as e:
                             st.error(f"🛑 AI Inference Error: {e}")
 
-        # --- RENDER THE AI OUTPUT (DEMO OR LIVE) ---
-        report = st.session_state.debate
-        
         st.markdown("---")
-        if report.get("is_demo"):
-            st.info("💡 **Portfolio Demo Mode:** Displaying an archived AI debate. Enter your Gemini API key in the sidebar and click 'Initiate' to run a live autonomous inference.")
+        
+        # If no report exists yet, show the system architecture explanation
+        if st.session_state.live_report is None:
+            st.info("💡 **System Architecture: Mixture-of-Experts (MoE)**\n\nEnter your Gemini API key in the sidebar and click 'Initiate' to trigger the autonomous workflow. Here is how the agents operate:")
+            
+            col_explain1, col_explain2 = st.columns(2)
+            with col_explain1:
+                st.success("🟢 **The Bull (Optimist):** Analyzes the VIX and sentiment data to build a case for why the market overreacted, seeking high-upside buying opportunities.")
+            with col_explain2:
+                st.error("🔴 **The Bear (Pessimist):** Cross-references the drop with global news to argue why the anomaly signals a deeper systemic crash.")
+                
+            st.warning("⚖️ **The Lead Manager (Judge):** Synthesizes the debate, issues a final executive summary, and outputs a strict BUY, SELL, or HOLD command with a calculated confidence score.")
+            st.markdown("🤖 **Autonomous Execution:** If a BUY or SELL is triggered, the system formats a webhook to the Alpaca Paper Trading API to execute a live market order for `SPY`.")
+
+        # If a live report was generated, display it
         else:
+            report = st.session_state.live_report
             st.success("✅ **Live Inference Complete:** Displaying real-time autonomous analysis.")
             
-        col_bull, col_bear = st.columns(2)
-        with col_bull:
-            st.success(f"🟢 **Optimistic AI Analyst:**\n\n{report['optimistic_view']}")
-        with col_bear:
-            st.error(f"🔴 **Pessimistic AI Analyst:**\n\n{report['pessimistic_view']}")
+            col_bull, col_bear = st.columns(2)
+            with col_bull:
+                st.success(f"🟢 **Optimistic AI Analyst:**\n\n{report['optimistic_view']}")
+            with col_bear:
+                st.error(f"🔴 **Pessimistic AI Analyst:**\n\n{report['pessimistic_view']}")
+                
+            st.info(f"⚖️ **Final Executive Summary:**\n\n{report['executive_summary']}")
             
-        st.info(f"⚖️ **Final Executive Summary:**\n\n{report['executive_summary']}")
-        
-        col_act, col_conf = st.columns(2)
-        col_act.metric("Determined Action", report['action'])
-        col_conf.metric("System Confidence", f"{report['confidence']}%")
+            col_act, col_conf = st.columns(2)
+            col_act.metric("Determined Action", report['action'])
+            col_conf.metric("System Confidence", f"{report['confidence']}%")
 
-        st.markdown("---")
-        st.subheader("🤖 Autonomous Execution Engine")
-        if report['action'] in ["BUY", "SELL"]:
-            if alpaca_key and alpaca_secret:
-                if report.get("is_demo"):
-                     st.warning(f"⚠️ Demo mode recommended {report['action']}. Live execution is disabled during demo runs.")
-                else:
+            st.markdown("---")
+            st.subheader("🤖 Autonomous Execution Engine")
+            if report['action'] in ["BUY", "SELL"]:
+                if alpaca_key and alpaca_secret:
                     try:
                         api = tradeapi.REST(alpaca_key, alpaca_secret, base_url='https://paper-api.alpaca.markets')
                         order = api.submit_order(
@@ -279,10 +277,10 @@ with tab_agents:
                         st.success(f"✅ **Trade Executed!** Successfully submitted a {report['action']} order for 1 share of SPY via Alpaca.")
                     except Exception as trade_e:
                         st.error(f"❌ Execution Failed. Verify your Alpaca keys. Error: {trade_e}")
+                else:
+                    st.warning(f"⚠️ The AI recommended a {report['action']} order, but the Trading Webhook is disabled (Missing Alpaca Keys).")
             else:
-                st.warning(f"⚠️ The AI recommended a {report['action']} order, but the Trading Webhook is disabled (Missing Alpaca Keys).")
-        else:
-            st.write("⏸️ The AI recommended a HOLD. No algorithmic trades executed.")
+                st.write("⏸️ The AI recommended a HOLD. No algorithmic trades executed.")
 
 # --- TAB 3: KNOWLEDGE GRAPH WITH SIDE-BY-SIDE EXPLANATION ---
 with tab_graph:
