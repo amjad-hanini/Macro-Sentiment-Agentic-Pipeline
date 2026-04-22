@@ -10,7 +10,6 @@ yfinance>=0.2.36
 # Machine Learning & AI Agents
 scikit-learn>=1.3.0
 google-generativeai>=0.3.2
-duckduckgo-search>=4.4.0
 
 # NLP & Deep Learning (FinBERT Backend)
 transformers>=4.37.0
