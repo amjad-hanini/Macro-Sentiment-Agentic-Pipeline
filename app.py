@@ -3,12 +3,10 @@ import pandas as pd
 import plotly.graph_objects as go
 from sqlalchemy import create_engine, text
 import google.generativeai as genai
-from duckduckgo_search import DDGS
 import json
 import sqlite3
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.mixture import GaussianMixture
-from sklearn.metrics.pairwise import cosine_similarity
 import alpaca_trade_api as tradeapi
 
 # ==========================================
@@ -17,8 +15,8 @@ import alpaca_trade_api as tradeapi
 st.set_page_config(page_title="Macro-Sentiment System", layout="wide")
 st.title("📈 Autonomous Agentic Analyzer")
 
-# HIGH-VISIBILITY LEGAL DISCLAIMER (Moved from Sidebar)
-st.warning("Legal Disclaimer: This system is for **educational and research purposes only**. The AI predictions, risk scores, and autonomous executions are simulated models and do not constitute financial advice. Algorithmic trading carries significant financial risk.", icon="⚠️")
+# HIGH-VISIBILITY LEGAL DISCLAIMER 
+st.warning("**⚠️ Legal Disclaimer:** This system is for **educational and research purposes only**. The AI predictions, risk scores, and autonomous executions are simulated models and do not constitute financial advice. Algorithmic trading carries significant financial risk.", icon="⚠️")
 
 # Force metric text to wrap appropriately on smaller displays
 st.markdown(
@@ -57,13 +55,11 @@ if submit_alpaca and alpaca_key and alpaca_secret:
 # ==========================================
 # 2. DATA INGESTION & MACHINE LEARNING
 # ==========================================
-# REDUCED CACHE TO 60 SECONDS SO THE TABLE UPDATES FASTER
 @st.cache_data(ttl=60)
 def fetch_from_db():
     engine = create_engine('sqlite:///macro_data.db')
     with engine.connect() as conn:
         try:
-            # Ensure the database contains the Agentic Memory column
             conn.execute(text("ALTER TABLE macro_data ADD COLUMN Agent_Report TEXT"))
             conn.commit()
         except:
@@ -113,7 +109,6 @@ except Exception as e:
 # ==========================================
 # 3. GLOBAL CONTEXT SETUP
 # ==========================================
-# Generate the list of dates for the dropdowns
 if not df_anomalies.empty:
     anomaly_dates = df_anomalies['Date'].dt.strftime('%Y-%m-%d').tolist()
 else:
@@ -186,7 +181,6 @@ with tab_agents:
         selected_date_str_tab2 = st.selectbox("🎯 Select Target Anomaly Date to Analyze:", anomaly_dates, key="tab2_date")
         sample = df_anomalies[df_anomalies['Date'].dt.strftime('%Y-%m-%d') == selected_date_str_tab2].iloc[0]
         
-        # We start with a blank state instead of fake data
         if "live_report" not in st.session_state:
             st.session_state.live_report = None
 
@@ -194,19 +188,19 @@ with tab_agents:
             if not api_key:
                 st.warning("Please save your Gemini API Key in the sidebar to run live inferences.")
             else:
-                with st.spinner("Agent 1 (Researcher) scraping intelligence..."):
+                with st.spinner("Agent 1 (Researcher) retrieving historical intelligence..."):
+                    genai.configure(api_key=api_key)
+                    research_model = genai.GenerativeModel('gemini-2.5-flash')
                     try:
-                        ddg_results = DDGS().text(f"major global financial news on {selected_date_str_tab2}", max_results=3)
-                        web_context = " ".join([res.get('body', '') for res in ddg_results]) if ddg_results else ""
-                    except:
+                        research_prompt = f"Act as a financial researcher. What were the major global macroeconomic headlines and stock market drivers exactly on or around {selected_date_str_tab2}? Provide a highly concise 3-sentence summary of the news environment."
+                        research_resp = research_model.generate_content(research_prompt)
+                        web_context = research_resp.text
+                    except Exception as e:
                         web_context = ""
+                        st.error(f"🛑 Researcher Agent Failed: {e}")
 
-                if not web_context:
-                    st.error("🛑 DuckDuckGo Search failed to retrieve news for this date (Possible Rate Limit). Please wait a moment and try again.")
-                else:
+                if web_context:
                     with st.spinner("Agents 2, 3 & 4 debating the data..."):
-                        genai.configure(api_key=api_key)
-                        model = genai.GenerativeModel('gemini-2.5-flash')
                         top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
                         
                         debate_prompt = f"""
@@ -223,7 +217,7 @@ with tab_agents:
                         }}
                         """
                         try:
-                            response = model.generate_content(debate_prompt)
+                            response = research_model.generate_content(debate_prompt)
                             raw_json = response.text.replace('```json', '').replace('```', '').strip()
                             st.session_state.live_report = json.loads(raw_json)
                         except Exception as e:
@@ -231,7 +225,6 @@ with tab_agents:
 
         st.markdown("---")
         
-        # If no report exists yet, show the system architecture explanation
         if st.session_state.live_report is None:
             st.info("💡 **System Architecture: Mixture-of-Experts (MoE)**\n\nEnter your Gemini API key in the sidebar and click 'Initiate' to trigger the autonomous workflow. Here is how the agents operate:")
             
@@ -239,12 +232,11 @@ with tab_agents:
             with col_explain1:
                 st.success("🟢 **The Bull (Optimist):** Analyzes the VIX and sentiment data to build a case for why the market overreacted, seeking high-upside buying opportunities.")
             with col_explain2:
-                st.error("🔴 **The Bear (Pessimist):** Cross-references the drop with global news to argue why the anomaly signals a deeper systemic crash.")
+                st.error("🔴 **The Bear (Pessimist):** Cross-references the drop with historical news to argue why the anomaly signals a deeper systemic crash.")
                 
             st.warning("⚖️ **The Lead Manager (Judge):** Synthesizes the debate, issues a final executive summary, and outputs a strict BUY, SELL, or HOLD command with a calculated confidence score.")
             st.markdown("🤖 **Autonomous Execution:** If a BUY or SELL is triggered, the system formats a webhook to the Alpaca Paper Trading API to execute a live market order for `SPY`.")
 
-        # If a live report was generated, display it
         else:
             report = st.session_state.live_report
             st.success("✅ **Live Inference Complete:** Displaying real-time autonomous analysis.")
@@ -285,7 +277,7 @@ with tab_agents:
 # --- TAB 3: KNOWLEDGE GRAPH WITH SIDE-BY-SIDE EXPLANATION ---
 with tab_graph:
     st.subheader("🕸️ Live Entity Knowledge Graph")
-    st.write("Using LLMs to extract relational structures from unstructured financial news.")
+    st.write("Using LLMs to extract relational structures from historical financial news.")
     
     if anomaly_dates:
         selected_date_str_tab3 = st.selectbox("🎯 Select Target Anomaly Date to Graph:", anomaly_dates, key="tab3_date")
@@ -295,18 +287,17 @@ with tab_graph:
                 st.warning("Please save your Gemini API Key in the sidebar.")
             else:
                 with st.spinner("Extracting Knowledge Graph and Generating Explanation..."):
+                    genai.configure(api_key=api_key)
+                    research_model = genai.GenerativeModel('gemini-2.5-flash')
                     try:
-                        ddg_results = DDGS().text(f"major global financial news on {selected_date_str_tab3}", max_results=3)
-                        web_context = " ".join([res.get('body', '') for res in ddg_results]) if ddg_results else ""
-                    except:
+                        research_prompt = f"What were the major global macroeconomic headlines and stock market drivers exactly on or around {selected_date_str_tab3}? Provide a concise summary of the key financial entities involved."
+                        research_resp = research_model.generate_content(research_prompt)
+                        web_context = research_resp.text
+                    except Exception as e:
                         web_context = ""
+                        st.error(f"🛑 Context Retrieval Failed: {e}")
 
-                    if not web_context:
-                        st.error("🛑 DuckDuckGo Search failed to retrieve news for this date (Possible Rate Limit). Please wait a moment and try again.")
-                    else:
-                        genai.configure(api_key=api_key)
-                        model = genai.GenerativeModel('gemini-2.5-flash')
-                        
+                    if web_context:
                         try:
                             graph_prompt = f"""
                             Read this financial news context: "{web_context}"
@@ -318,7 +309,7 @@ with tab_graph:
                                 "explanation": "A 2-3 sentence plain-English explanation of the cause-and-effect loop happening in this graph, written for a non-technical manager."
                             }}
                             """
-                            graph_response = model.generate_content(graph_prompt)
+                            graph_response = research_model.generate_content(graph_prompt)
                             raw_json = graph_response.text.replace('```json', '').replace('```', '').strip()
                             graph_data = json.loads(raw_json)
                             
