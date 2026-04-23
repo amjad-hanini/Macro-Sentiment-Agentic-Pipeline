@@ -277,7 +277,7 @@ with tab_graph:
             if not api_key:
                 st.warning("Please save your Gemini API Key in the sidebar.")
             else:
-                with st.spinner("Extracting Knowledge Graph and Generating Explanation (Single API Call)..."):
+                with st.spinner("Extracting Knowledge Graph and Generating Explanation"):
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     
@@ -311,7 +311,8 @@ with tab_graph:
                                 mermaid.initialize({{ startOnLoad: true, theme: 'dark' }});
                                 </script>
                                 """,
-                                height=450
+                                height=800,
+                                scrolling=True
                             )
                             
                         with col_info:
