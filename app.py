@@ -101,7 +101,6 @@ def run_mapreduce(anomalies_df):
 try:
     df_joined, df_anomalies = fetch_from_db()
     rf_model, gmm_model = train_live_models(df_joined)
-    trending_themes_df = run_mapreduce(df_anomalies)
 except Exception as e:
     st.error(f"Database connection failed: {e}")
     st.stop()
@@ -136,6 +135,9 @@ with tab_overview:
     mask = (df_joined['Date'].dt.date >= date_range[0]) & (df_joined['Date'].dt.date <= date_range[1])
     filtered_df = df_joined.loc[mask]
     filtered_anomalies = df_anomalies.loc[(df_anomalies['Date'].dt.date >= date_range[0]) & (df_anomalies['Date'].dt.date <= date_range[1])]
+    
+    # DYNAMIC MAPREDUCE RECALCULATION
+    filtered_themes_df = run_mapreduce(filtered_anomalies)
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=filtered_df['Date'].dt.strftime('%Y-%m-%d'), y=filtered_df['Price_Change_Pct'], name='DJIA % Change', line=dict(color='blue')))
@@ -163,11 +165,12 @@ with tab_overview:
             
     with col_mapreduce:
         st.subheader("🗺️ MapReduce: Top Crisis Themes")
+        max_freq = int(filtered_themes_df['Frequency'].max()) if not filtered_themes_df.empty else 100
         st.dataframe(
-            trending_themes_df,
+            filtered_themes_df,
             column_config={
                 "Macro Theme": "Crisis Theme",
-                "Frequency": st.column_config.ProgressColumn("Frequency", format="%d", min_value=0, max_value=int(trending_themes_df['Frequency'].max())),
+                "Frequency": st.column_config.ProgressColumn("Frequency", format="%d", min_value=0, max_value=max_freq),
             },
             hide_index=True, use_container_width=True
         )
@@ -191,7 +194,7 @@ with tab_agents:
                 with st.spinner("Agents retrieving context and debating data (Single API Call to preserve quota)..."):
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-2.5-flash')
-                    top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
+                    top_themes = ", ".join(filtered_themes_df['Macro Theme'].head(3).tolist())
                     
                     debate_prompt = f"""
                     You are orchestrating a hedge fund debate regarding the market anomaly on {selected_date_str_tab2}.
@@ -277,7 +280,7 @@ with tab_graph:
             if not api_key:
                 st.warning("Please save your Gemini API Key in the sidebar.")
             else:
-                with st.spinner("Extracting Knowledge Graph and Generating Explanation"):
+                with st.spinner("Extracting Knowledge Graph and Generating Explanation (Single API Call)..."):
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     
