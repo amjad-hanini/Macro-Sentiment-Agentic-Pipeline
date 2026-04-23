@@ -16,7 +16,7 @@ st.set_page_config(page_title="Macro-Sentiment System", layout="wide")
 st.title("📈 Autonomous Agentic Analyzer")
 
 # HIGH-VISIBILITY LEGAL DISCLAIMER 
-st.warning("**⚠️ Legal Disclaimer:** This system is for **educational and research purposes only**. The AI predictions, risk scores, and autonomous executions are simulated models and do not constitute financial advice. Algorithmic trading carries significant financial risk.", icon="⚠️")
+st.warning("Legal Disclaimer: This system is for **educational and research purposes only**. The AI predictions, risk scores, and autonomous executions are simulated models and do not constitute financial advice. Algorithmic trading carries significant financial risk.", icon="⚠️")
 
 # Force metric text to wrap appropriately on smaller displays
 st.markdown(
@@ -178,7 +178,6 @@ with tab_agents:
     st.write("Orchestrating AI agents to debate market conditions before executing algorithmic trades.")
     
     if anomaly_dates:
-        # THE FIX: Timeline scrubber for Tab 2
         selected_date_str_tab2 = st.select_slider("🎯 Select Target Anomaly Date to Analyze:", options=anomaly_dates, key="tab2_date")
         sample = df_anomalies[df_anomalies['Date'].dt.strftime('%Y-%m-%d') == selected_date_str_tab2].iloc[0]
         
@@ -189,40 +188,31 @@ with tab_agents:
             if not api_key:
                 st.warning("Please save your Gemini API Key in the sidebar to run live inferences.")
             else:
-                with st.spinner("Agent 1 (Researcher) retrieving historical intelligence..."):
+                with st.spinner("Agents retrieving context and debating data (Single API Call to preserve quota)..."):
                     genai.configure(api_key=api_key)
-                    research_model = genai.GenerativeModel('gemini-2.5-flash')
+                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
+                    
+                    debate_prompt = f"""
+                    You are orchestrating a hedge fund debate regarding the market anomaly on {selected_date_str_tab2}.
+                    First, use your internal knowledge to recall the major global macroeconomic headlines and stock market drivers for this exact date.
+                    Data: Drop: {sample['Price_Change_Pct']:.2f}%, VIX: {sample['Volatility_VIX']:.2f}, Themes: {top_themes}.
+                    
+                    Respond ONLY with a valid JSON using plain English:
+                    {{
+                        "optimistic_view": "A strong 2-sentence argument on why this panic is an overreaction and a buying opportunity.",
+                        "pessimistic_view": "A strong 2-sentence argument on why this anomaly signals a systemic crash based on the news from that date.",
+                        "executive_summary": "The Lead Manager's final executive summary combining both arguments and the data.",
+                        "action": "BUY" or "SELL" or "HOLD",
+                        "confidence": "Integer 1-100 representing certainty."
+                    }}
+                    """
                     try:
-                        research_prompt = f"Act as a financial researcher. What were the major global macroeconomic headlines and stock market drivers exactly on or around {selected_date_str_tab2}? Provide a highly concise 3-sentence summary of the news environment."
-                        research_resp = research_model.generate_content(research_prompt)
-                        web_context = research_resp.text
+                        response = model.generate_content(debate_prompt)
+                        raw_json = response.text.replace('```json', '').replace('```', '').strip()
+                        st.session_state.live_report = json.loads(raw_json)
                     except Exception as e:
-                        web_context = ""
-                        st.error(f"🛑 Researcher Agent Failed: {e}")
-
-                if web_context:
-                    with st.spinner("Agents 2, 3 & 4 debating the data..."):
-                        top_themes = ", ".join(trending_themes_df['Macro Theme'].head(3).tolist())
-                        
-                        debate_prompt = f"""
-                        You are orchestrating a hedge fund debate regarding the market anomaly on {selected_date_str_tab2}.
-                        Data: Drop: {sample['Price_Change_Pct']:.2f}%, VIX: {sample['Volatility_VIX']:.2f}, Themes: {top_themes}. Context: "{web_context}"
-                        
-                        Respond ONLY with a valid JSON using plain English:
-                        {{
-                            "optimistic_view": "A strong 2-sentence argument on why this panic is an overreaction and a buying opportunity.",
-                            "pessimistic_view": "A strong 2-sentence argument on why this anomaly signals a systemic crash.",
-                            "executive_summary": "The Lead Manager's final executive summary combining both arguments and the data.",
-                            "action": "BUY" or "SELL" or "HOLD",
-                            "confidence": "Integer 1-100 representing certainty."
-                        }}
-                        """
-                        try:
-                            response = research_model.generate_content(debate_prompt)
-                            raw_json = response.text.replace('```json', '').replace('```', '').strip()
-                            st.session_state.live_report = json.loads(raw_json)
-                        except Exception as e:
-                            st.error(f"🛑 AI Inference Error: {e}")
+                        st.error(f"🛑 AI Inference Error: {e}")
 
         st.markdown("---")
         
@@ -281,64 +271,55 @@ with tab_graph:
     st.write("Using LLMs to extract relational structures from historical financial news.")
     
     if anomaly_dates:
-        # THE FIX: Timeline scrubber for Tab 3
         selected_date_str_tab3 = st.select_slider("🎯 Select Target Anomaly Date to Graph:", options=anomaly_dates, key="tab3_date")
         
         if st.button("Generate Relational Graph"):
             if not api_key:
                 st.warning("Please save your Gemini API Key in the sidebar.")
             else:
-                with st.spinner("Extracting Knowledge Graph and Generating Explanation..."):
+                with st.spinner("Extracting Knowledge Graph and Generating Explanation (Single API Call)..."):
                     genai.configure(api_key=api_key)
-                    research_model = genai.GenerativeModel('gemini-2.5-flash')
+                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    
                     try:
-                        research_prompt = f"What were the major global macroeconomic headlines and stock market drivers exactly on or around {selected_date_str_tab3}? Provide a concise summary of the key financial entities involved."
-                        research_resp = research_model.generate_content(research_prompt)
-                        web_context = research_resp.text
+                        graph_prompt = f"""
+                        Use your internal knowledge to recall the major global macroeconomic headlines and stock market drivers exactly on or around {selected_date_str_tab3}.
+                        Extract the 5 most important entities (like Federal Reserve, Tech Stocks, Inflation) from that date's news and their relationships.
+                        
+                        Respond ONLY with a valid JSON using this exact format:
+                        {{
+                            "mermaid_code": "Raw Mermaid.js graph syntax. Start with 'graph TD;'.",
+                            "explanation": "A 2-3 sentence plain-English explanation of the cause-and-effect loop happening in this graph, written for a non-technical manager."
+                        }}
+                        """
+                        graph_response = model.generate_content(graph_prompt)
+                        raw_json = graph_response.text.replace('```json', '').replace('```', '').strip()
+                        graph_data = json.loads(raw_json)
+                        
+                        mermaid_syntax = graph_data["mermaid_code"].replace('```mermaid', '').replace('```', '').strip()
+                        
+                        col_graph, col_info = st.columns([2, 1])
+                        
+                        with col_graph:
+                            st.components.v1.html(
+                                f"""
+                                <div class="mermaid">
+                                {mermaid_syntax}
+                                </div>
+                                <script type="module">
+                                import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+                                mermaid.initialize({{ startOnLoad: true, theme: 'dark' }});
+                                </script>
+                                """,
+                                height=450
+                            )
+                            
+                        with col_info:
+                            st.info("💡 **How to Read This Graph**\n\nThe arrows represent cause-and-effect relationships extracted autonomously from raw news headlines on the date of the market anomaly.")
+                            st.success(f"🤖 **AI Translation:**\n\n{graph_data['explanation']}")
+                            
                     except Exception as e:
-                        web_context = ""
-                        st.error(f"🛑 Context Retrieval Failed: {e}")
-
-                    if web_context:
-                        try:
-                            graph_prompt = f"""
-                            Read this financial news context: "{web_context}"
-                            Extract the 5 most important entities (like Federal Reserve, Tech Stocks, Inflation) and their relationships.
-                            
-                            Respond ONLY with a valid JSON using this exact format:
-                            {{
-                                "mermaid_code": "Raw Mermaid.js graph syntax. Start with 'graph TD;'.",
-                                "explanation": "A 2-3 sentence plain-English explanation of the cause-and-effect loop happening in this graph, written for a non-technical manager."
-                            }}
-                            """
-                            graph_response = research_model.generate_content(graph_prompt)
-                            raw_json = graph_response.text.replace('```json', '').replace('```', '').strip()
-                            graph_data = json.loads(raw_json)
-                            
-                            mermaid_syntax = graph_data["mermaid_code"].replace('```mermaid', '').replace('```', '').strip()
-                            
-                            col_graph, col_info = st.columns([2, 1])
-                            
-                            with col_graph:
-                                st.components.v1.html(
-                                    f"""
-                                    <div class="mermaid">
-                                    {mermaid_syntax}
-                                    </div>
-                                    <script type="module">
-                                    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-                                    mermaid.initialize({{ startOnLoad: true, theme: 'dark' }});
-                                    </script>
-                                    """,
-                                    height=450
-                                )
-                                
-                            with col_info:
-                                st.info("💡 **How to Read This Graph**\n\nThe arrows represent cause-and-effect relationships extracted autonomously from raw news headlines on the date of the market anomaly.")
-                                st.success(f"🤖 **AI Translation:**\n\n{graph_data['explanation']}")
-                                
-                        except Exception as e:
-                            st.error(f"Failed to map relationships. Check API limits or JSON formatting. Error: {e}")
+                        st.error(f"Failed to map relationships. Check API limits or JSON formatting. Error: {e}")
 
 # --- TAB 4: TEXT-TO-SQL ---
 with tab_sql:
