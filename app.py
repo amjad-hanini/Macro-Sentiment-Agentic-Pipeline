@@ -289,10 +289,15 @@ with tab_graph:
                         Use your internal knowledge to recall the major global macroeconomic headlines and stock market drivers exactly on or around {selected_date_str_tab3}.
                         Extract the 5 most important entities (like Federal Reserve, Tech Stocks, Inflation) from that date's news and their relationships.
                         
+                        CRITICAL MERMAID RULES TO PREVENT CRASHES:
+                        1. Node IDs must be simple letters (A, B, C).
+                        2. Do NOT use quotation marks ("), parentheses (), or colons (:) anywhere in the graph. Keep labels purely alphanumeric.
+                        3. Example safe syntax: A[Federal Reserve] --> B[Tech Stocks]
+                        
                         Respond ONLY with a valid JSON using this exact format:
                         {{
                             "mermaid_code": "Raw Mermaid.js graph syntax. Start with 'graph TD;'.",
-                            "explanation": "A 2-3 sentence plain-English explanation of the cause-and-effect loop happening in this graph, written for a non-technical manager."
+                            "explanation": "A 2-3 sentence plain-English explanation of the cause-and-effect loop happening in this graph."
                         }}
                         """
                         graph_response = model.generate_content(graph_prompt)
