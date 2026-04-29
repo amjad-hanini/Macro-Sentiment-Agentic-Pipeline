@@ -48,16 +48,30 @@ This project is built on four core pillars of modern data engineering and AI:
 * **Algorithmic Trading:** Alpaca Trade API
 * **DevOps & CI/CD:** GitHub Actions (Automated Cron Jobs), Automated LaTeX PDF Compilation
 
-## ☁️ Cloud Deployment & Security
-This project utilizes **Streamlit Secrets** and **GitHub Actions Secrets** to keep API keys completely out of version control, ensuring enterprise-grade security for the open-source repository.
+## 💻 Quickstart & Development
 
-If deploying your own fork on Streamlit Community Cloud, navigate to **Settings > Secrets** and paste your API keys in TOML format:
+> **🗝️ Prerequisite: API Keys**
+> To run the interactive AI agents locally or via the web deployment, you will need a free Google Gemini API key.
+> To enable live algorithmic trading, you will need Alpaca Paper Trading keys.
+> Users can securely enter these directly into the application's sidebar UI.
 
-```toml
-GEMINI_API_KEY="your_google_key"
-ALPACA_API_KEY="your_alpaca_key"
-ALPACA_API_SECRET="your_alpaca_secret"
-```
+**1. Clone the repository:**
+
+    git clone https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline.git
+    cd Macro-Sentiment-Agentic-Pipeline
+
+**2. Install the required dependencies:**
+
+    pip install -r requirements.txt
+
+**3. Run the Backend Data Pipeline (Optional):**
+*This will fetch today's live news and rebuild the local SQLite database.*
+
+    python pipeline.py
+
+**4. Launch the Streamlit Dashboard:**
+
+    streamlit run app.py
 
 ---
 
