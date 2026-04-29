@@ -33,30 +33,27 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ==========================================
-# 2. SECURE CLOUD AUTHENTICATION
-# ==========================================
-st.sidebar.markdown("### 🗝️ System Status")
-try:
-    api_key = st.secrets["GEMINI_API_KEY"]
-    alpaca_key = st.secrets.get("ALPACA_API_KEY", None)
-    alpaca_secret = st.secrets.get("ALPACA_API_SECRET", None)
-    
-    genai.configure(api_key=api_key)
+# Multi-API Authentication Sidebar
+st.sidebar.markdown("### 🗝️ Intelligence Integration")
+with st.sidebar.form("gemini_form"):
+    api_key = st.text_input("Google Gemini API Key (Required):", type="password")
+    submit_gemini = st.form_submit_button("Connect Intelligence")
+
+if submit_gemini and api_key:
     st.sidebar.success("✅ Intelligence Core Online.")
-    
-    if alpaca_key and alpaca_secret:
-        st.sidebar.success("✅ Trading Webhook Armed.")
-    else:
-        st.sidebar.info("⏸️ Trading Webhook Offline (No Alpaca Keys).")
-        
-except Exception as e:
-    st.error("API Keys missing from Streamlit Secrets. Please configure the vault in Streamlit Community Cloud.")
-    st.stop()
 
+st.sidebar.markdown("### 💸 Execution Integration (Optional)")
+with st.sidebar.form("alpaca_form"):
+    st.markdown("Enter [Alpaca Paper Trading](https://alpaca.markets/) keys to enable live autonomous execution.")
+    alpaca_key = st.text_input("Alpaca API Key:", type="password")
+    alpaca_secret = st.text_input("Alpaca Secret Key:", type="password")
+    submit_alpaca = st.form_submit_button("Connect Trading Webhook")
+
+if submit_alpaca and alpaca_key and alpaca_secret:
+    st.sidebar.success("✅ Trading Webhook Armed.")
 
 # ==========================================
-# 3. DATA INGESTION & MACHINE LEARNING
+# 2. DATA INGESTION & MACHINE LEARNING
 # ==========================================
 @st.cache_data(ttl=60)
 def fetch_from_db():
@@ -109,7 +106,7 @@ except Exception as e:
     st.stop()
 
 # ==========================================
-# 4. GLOBAL CONTEXT SETUP
+# 3. GLOBAL CONTEXT SETUP
 # ==========================================
 if not df_anomalies.empty:
     anomaly_dates = df_anomalies['Date'].dt.strftime('%Y-%m-%d').tolist()
@@ -117,7 +114,7 @@ else:
     anomaly_dates = []
 
 # ==========================================
-# 5. FRONTEND UI: ENTERPRISE TABS
+# 4. FRONTEND UI: ENTERPRISE TABS
 # ==========================================
 tab_overview, tab_agents, tab_graph, tab_sql = st.tabs([
     "📊 Market Overview", 
@@ -139,6 +136,7 @@ with tab_overview:
     filtered_df = df_joined.loc[mask]
     filtered_anomalies = df_anomalies.loc[(df_anomalies['Date'].dt.date >= date_range[0]) & (df_anomalies['Date'].dt.date <= date_range[1])]
     
+    # DYNAMIC MAPREDUCE RECALCULATION
     filtered_themes_df = run_mapreduce(filtered_anomalies)
 
     fig = go.Figure()
@@ -194,38 +192,42 @@ with tab_agents:
             st.session_state.live_report = None
 
         if st.button("Initiate Multi-Agent Debate", type="primary"):
-            with st.spinner("Agents retrieving context and debating data (Single API Call to preserve quota)..."):
-                model = genai.GenerativeModel('gemini-2.5-flash')
-                top_themes = ", ".join(filtered_themes_df['Macro Theme'].head(3).tolist())
-                
-                debate_prompt = f"""
-                You are orchestrating a hedge fund debate regarding the market anomaly on {selected_date_str_tab2}.
-                First, use your internal knowledge to recall the major global macroeconomic headlines and stock market drivers for this exact date.
-                Data: Drop: {sample['Price_Change_Pct']:.2f}%, VIX: {sample['Volatility_VIX']:.2f}, Themes: {top_themes}.
-                
-                Respond ONLY with a valid JSON using plain English:
-                {{
-                    "optimistic_view": "A strong 2-sentence argument on why this panic is an overreaction and a buying opportunity.",
-                    "pessimistic_view": "A strong 2-sentence argument on why this anomaly signals a systemic crash based on the news from that date.",
-                    "executive_summary": "The Lead Manager's final executive summary combining both arguments and the data.",
-                    "action": "BUY" or "SELL" or "HOLD",
-                    "confidence": 85
-                }}
-                """
-                try:
-                    # STRICT JSON ENFORCEMENT
-                    response = model.generate_content(
-                        debate_prompt,
-                        generation_config={"response_mime_type": "application/json"}
-                    )
-                    st.session_state.live_report = json.loads(response.text)
-                except Exception as e:
-                    st.error(f"🛑 AI Inference Error: {e}")
+            if not api_key:
+                st.warning("Please save your Gemini API Key in the sidebar to run live inferences.")
+            else:
+                with st.spinner("Agents retrieving context and debating data (Single API Call to preserve quota)..."):
+                    genai.configure(api_key=api_key)
+                    model = genai.GenerativeModel('gemini-2.5-flash')
+                    top_themes = ", ".join(filtered_themes_df['Macro Theme'].head(3).tolist())
+                    
+                    debate_prompt = f"""
+                    You are orchestrating a hedge fund debate regarding the market anomaly on {selected_date_str_tab2}.
+                    First, use your internal knowledge to recall the major global macroeconomic headlines and stock market drivers for this exact date.
+                    Data: Drop: {sample['Price_Change_Pct']:.2f}%, VIX: {sample['Volatility_VIX']:.2f}, Themes: {top_themes}.
+                    
+                    Respond ONLY with a valid JSON using plain English:
+                    {{
+                        "optimistic_view": "A strong 2-sentence argument on why this panic is an overreaction and a buying opportunity.",
+                        "pessimistic_view": "A strong 2-sentence argument on why this anomaly signals a systemic crash based on the news from that date.",
+                        "executive_summary": "The Lead Manager's final executive summary combining both arguments and the data.",
+                        "action": "BUY" or "SELL" or "HOLD",
+                        "confidence": 85
+                    }}
+                    """
+                    try:
+                        # STRICT JSON ENFORCEMENT
+                        response = model.generate_content(
+                            debate_prompt,
+                            generation_config={"response_mime_type": "application/json"}
+                        )
+                        st.session_state.live_report = json.loads(response.text)
+                    except Exception as e:
+                        st.error(f"🛑 AI Inference Error: {e}")
 
         st.markdown("---")
         
         if st.session_state.live_report is None:
-            st.info("💡 **System Architecture: Mixture-of-Experts (MoE)**\n\nClick 'Initiate' to trigger the autonomous workflow. Here is how the agents operate:")
+            st.info("💡 **System Architecture: Mixture-of-Experts (MoE)**\n\nEnter your Gemini API key in the sidebar and click 'Initiate' to trigger the autonomous workflow. Here is how the agents operate:")
             
             col_explain1, col_explain2 = st.columns(2)
             with col_explain1:
@@ -282,80 +284,88 @@ with tab_graph:
         selected_date_str_tab3 = st.select_slider("🎯 Select Target Anomaly Date to Graph:", options=anomaly_dates, key="tab3_date")
         
         if st.button("Generate Relational Graph"):
-            with st.spinner("Extracting Knowledge Graph and Generating Explanation (Single API Call)..."):
-                model = genai.GenerativeModel('gemini-2.5-flash')
-                
-                try:
-                    graph_prompt = f"""
-                    Use your internal knowledge to recall the major global macroeconomic headlines and stock market drivers exactly on or around {selected_date_str_tab3}.
-                    Extract the 5 most important entities (like Federal Reserve, Tech Stocks, Inflation) from that date's news and their relationships.
+            if not api_key:
+                st.warning("Please save your Gemini API Key in the sidebar.")
+            else:
+                with st.spinner("Extracting Knowledge Graph and Generating Explanation (Single API Call)..."):
+                    genai.configure(api_key=api_key)
+                    model = genai.GenerativeModel('gemini-2.5-flash')
                     
-                    CRITICAL MERMAID RULES TO PREVENT CRASHES:
-                    1. Node IDs must be simple letters (A, B, C).
-                    2. Do NOT use quotation marks ("), parentheses (), or colons (:) anywhere in the graph. Keep labels purely alphanumeric.
-                    3. Example safe syntax: A[Federal Reserve] --> B[Tech Stocks]
-                    
-                    Respond ONLY with a valid JSON using this exact format:
-                    {{
-                        "mermaid_code": "Raw Mermaid.js graph syntax. Start with 'graph TD;'.",
-                        "explanation": "A 2-3 sentence plain-English explanation of the cause-and-effect loop happening in this graph."
-                    }}
-                    """
-                    # STRICT JSON ENFORCEMENT
-                    graph_response = model.generate_content(
-                        graph_prompt,
-                        generation_config={"response_mime_type": "application/json"}
-                    )
-                    graph_data = json.loads(graph_response.text)
-                    
-                    mermaid_syntax = graph_data["mermaid_code"].replace('```mermaid', '').replace('```', '').strip()
-                    
-                    col_graph, col_info = st.columns([2, 1])
-                    
-                    with col_graph:
-                        st.components.v1.html(
-                            f"""
-                            <div class="mermaid">
-                            {mermaid_syntax}
-                            </div>
-                            <script type="module">
-                            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-                            mermaid.initialize({{ startOnLoad: true, theme: 'dark' }});
-                            </script>
-                            """,
-                            height=800,
-                            scrolling=True
+                    try:
+                        graph_prompt = f"""
+                        Use your internal knowledge to recall the major global macroeconomic headlines and stock market drivers exactly on or around {selected_date_str_tab3}.
+                        Extract the 5 most important entities (like Federal Reserve, Tech Stocks, Inflation) from that date's news and their relationships.
+                        
+                        CRITICAL MERMAID RULES TO PREVENT CRASHES:
+                        1. Node IDs must be simple letters (A, B, C).
+                        2. Do NOT use quotation marks ("), parentheses (), or colons (:) anywhere in the graph. Keep labels purely alphanumeric.
+                        3. Example safe syntax: A[Federal Reserve] --> B[Tech Stocks]
+                        
+                        Respond ONLY with a valid JSON using this exact format:
+                        {{
+                            "mermaid_code": "Raw Mermaid.js graph syntax. Start with 'graph TD;'.",
+                            "explanation": "A 2-3 sentence plain-English explanation of the cause-and-effect loop happening in this graph."
+                        }}
+                        """
+                        # STRICT JSON ENFORCEMENT
+                        graph_response = model.generate_content(
+                            graph_prompt,
+                            generation_config={"response_mime_type": "application/json"}
                         )
+                        graph_data = json.loads(graph_response.text)
                         
-                    with col_info:
-                        st.info("💡 **How to Read This Graph**\n\nThe arrows represent cause-and-effect relationships extracted autonomously from raw news headlines on the date of the market anomaly.")
-                        st.success(f"🤖 **AI Translation:**\n\n{graph_data['explanation']}")
+                        mermaid_syntax = graph_data["mermaid_code"].replace('```mermaid', '').replace('```', '').strip()
                         
-                except Exception as e:
-                    st.error(f"Failed to map relationships. Check API limits or JSON formatting. Error: {e}")
+                        col_graph, col_info = st.columns([2, 1])
+                        
+                        with col_graph:
+                            st.components.v1.html(
+                                f"""
+                                <div class="mermaid">
+                                {mermaid_syntax}
+                                </div>
+                                <script type="module">
+                                import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+                                mermaid.initialize({{ startOnLoad: true, theme: 'dark' }});
+                                </script>
+                                """,
+                                height=800,
+                                scrolling=True
+                            )
+                            
+                        with col_info:
+                            st.info("💡 **How to Read This Graph**\n\nThe arrows represent cause-and-effect relationships extracted autonomously from raw news headlines on the date of the market anomaly.")
+                            st.success(f"🤖 **AI Translation:**\n\n{graph_data['explanation']}")
+                            
+                    except Exception as e:
+                        st.error(f"Failed to map relationships. Check API limits or JSON formatting. Error: {e}")
 
 # --- TAB 4: TEXT-TO-SQL ---
 with tab_sql:
     st.subheader("🕵️‍♂️ Database Agent (Text-to-SQL)")
     user_q = st.text_input("Ask a question (e.g., 'What was the highest VIX level in 2020?'):")
     if user_q:
-        with st.spinner("Translating..."):
-            sql_model = genai.GenerativeModel('gemini-2.5-flash')
-            schema_prompt = f"Write a valid SQLite query for table `macro_data`. Columns: `Date`, `Price_Change_Pct`, `Volatility_VIX`, `Sentiment_Score`, `Is_Anomaly`. Question: {user_q}. Return ONLY raw SQL string."
-            try:
-                sql_resp = sql_model.generate_content(schema_prompt)
-                raw_sql = sql_resp.text.replace('```sql', '').replace('```', '').strip()
-                
-                st.markdown("**Generated SQL:**")
-                st.code(raw_sql, language="sql")
-                
-                engine = create_engine('sqlite:///macro_data.db')
-                with engine.connect() as conn:
-                    result_df = pd.read_sql(text(raw_sql), conn)
+        if not api_key:
+            st.warning("API key required in the sidebar.")
+        else:
+            with st.spinner("Translating..."):
+                genai.configure(api_key=api_key)
+                sql_model = genai.GenerativeModel('gemini-2.5-flash')
+                schema_prompt = f"Write a valid SQLite query for table `macro_data`. Columns: `Date`, `Price_Change_Pct`, `Volatility_VIX`, `Sentiment_Score`, `Is_Anomaly`. Question: {user_q}. Return ONLY raw SQL string."
+                try:
+                    sql_resp = sql_model.generate_content(schema_prompt)
+                    raw_sql = sql_resp.text.replace('```sql', '').replace('```', '').strip()
                     
-                if not result_df.empty:
-                    st.dataframe(result_df, hide_index=True)
-                else:
-                    st.info("Query returned no results.")
-            except Exception as e:
-                st.error(f"🛑 Crash Diagnostics: {e}")
+                    st.markdown("**Generated SQL:**")
+                    st.code(raw_sql, language="sql")
+                    
+                    engine = create_engine('sqlite:///macro_data.db')
+                    with engine.connect() as conn:
+                        result_df = pd.read_sql(text(raw_sql), conn)
+                        
+                    if not result_df.empty:
+                        st.dataframe(result_df, hide_index=True)
+                    else:
+                        st.info("Query returned no results.")
+                except Exception as e:
+                    st.error(f"🛑 Crash Diagnostics: {e}")
