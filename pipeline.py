@@ -33,17 +33,14 @@ def fetch_news_data(dates):
     Simulates global macroeconomic headlines for portfolio demonstration.
     In a true production environment, this connects to a paid firehose API.
     """
-    # Pools of realistic financial terminology
     subjects = ["Federal Reserve", "Inflation", "Tech stocks", "Oil prices", "Treasury yields", "Consumer spending", "Geopolitical tensions", "Supply chains", "Housing market", "Unemployment data"]
     verbs = ["surge", "plummet", "stabilize", "trigger selloff", "rally", "collapse", "spark panic", "boost confidence", "signal recession", "exceed expectations"]
     impacts = ["global markets", "investor sentiment", "future rate cuts", "corporate earnings", "emerging economies"]
     
     headlines = []
-    # Seed the randomizer so the database builds consistently
     random.seed(42) 
     
     for _ in dates:
-        # Create a synthetic daily news summary mimicking real financial reporting
         h1 = f"{random.choice(subjects)} {random.choice(verbs)} impacting {random.choice(impacts)}."
         h2 = f"Analysts closely monitor how {random.choice(subjects)} will affect {random.choice(impacts)}."
         headlines.append(f"{h1} {h2}")
@@ -101,10 +98,11 @@ def build_database():
     
     conn = sqlite3.connect('macro_data.db')
     try:
+        # Check if table exists before querying to avoid crashes on fresh builds
         old_db = pd.read_sql('SELECT Date, Agent_Report FROM macro_data WHERE Agent_Report IS NOT NULL', conn)
         old_db['Date'] = pd.to_datetime(old_db['Date'])
         joined = pd.merge(joined, old_db, on='Date', how='left')
-    except:
+    except (sqlite3.OperationalError, pd.errors.DatabaseError):
         joined['Agent_Report'] = None
         
     joined.to_sql('macro_data', conn, if_exists='replace', index=False)
@@ -137,7 +135,6 @@ def generate_latex_report(db_path='macro_data.db'):
         sentiment = latest['Sentiment_Score']
         price_change = latest['Price_Change_Pct']
         
-        # REMOVED EMOJIS TO PREVENT LATEX EXIT CODE 12 CRASH
         anomaly_status = "CRISIS DETECTED" if latest['Is_Anomaly'] == 1 else "STANDARD REGIME"
         
         conn.close()
