@@ -1,6 +1,21 @@
-# 📈 Autonomous Macro-Sentiment Agentic Pipeline
+<h1 align="center">📈 Autonomous Macro-Sentiment Agentic Pipeline</h1>
+
+<p align="center">
+  <a href="https://macro-sentiment-agentic-pipeline.streamlit.app/"><strong>Live Dashboard</strong></a> ·
+  <a href="#-quickstart--development"><strong>Quickstart</strong></a> ·
+  <a href="#-tech-stack"><strong>Tech Stack</strong></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10-blue.svg?logo=python&logoColor=white" alt="Python 3.10">
+  <img src="https://img.shields.io/badge/Framework-Streamlit-FF4B4B.svg?logo=streamlit&logoColor=white" alt="Streamlit">
+  <img src="https://img.shields.io/badge/AI-Google_Gemini-8E75B2.svg?logo=google&logoColor=white" alt="Gemini AI">
+  <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License">
+</p>
 
 An autonomous, multi-agent AI pipeline that synthesizes macro volatility and NLP sentiment to predict market anomalies, orchestrate MoE analyst debates, and execute algorithmic trades.
+
+---
 
 ### 🌟 Enterprise-Grade Architecture
 * **🤖 Text-to-SQL Database Agent:** Integrates Gemini 2.5 Flash as an active query agent, allowing users to interrogate the historical SQLite database using natural language.
@@ -14,8 +29,6 @@ An autonomous, multi-agent AI pipeline that synthesizes macro volatility and NLP
 * **🕸️ LLM Knowledge Graph Extraction:** Dynamically reads AI-retrieved historical financial news and autonomously generates interactive Entity-Relationship Knowledge Graphs (via Mermaid.js) to map macroeconomic domino effects.
 
 ## 🏗️ System Architecture
-
-**🔴 Live Interactive Dashboard:** [Click here to view the Streamlit App](https://macro-sentiment-agentic-pipeline.streamlit.app/)
 
 This project is built on four core pillars of modern data engineering and AI:
 
@@ -48,7 +61,7 @@ This project is built on four core pillars of modern data engineering and AI:
 * **Algorithmic Trading:** Alpaca Trade API
 * **DevOps & CI/CD:** GitHub Actions (Automated Cron Jobs), Automated LaTeX PDF Compilation
 
-## 💻 Quickstart & Development
+## 🚀 Quickstart & Development
 
 > **🗝️ Prerequisite: API Keys**
 > To run the interactive AI agents locally or via the web deployment, you will need a free Google Gemini API key.
@@ -56,26 +69,30 @@ This project is built on four core pillars of modern data engineering and AI:
 > Users can securely enter these directly into the application's sidebar UI.
 
 **1. Clone the repository:**
-
-    git clone https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline.git
-    cd Macro-Sentiment-Agentic-Pipeline
+```bash
+git clone [https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline.git](https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline.git)
+cd Macro-Sentiment-Agentic-Pipeline
+```
 
 **2. Install the required dependencies:**
-
-    pip install -r requirements.txt
+```bash
+pip install -r requirements.txt
+```
 
 **3. Run the Backend Data Pipeline (Optional):**
 *This will fetch today's live news and rebuild the local SQLite database.*
-
-    python pipeline.py
+```bash
+python pipeline.py
+```
 
 **4. Launch the Streamlit Dashboard:**
-
-    streamlit run app.py
+```bash
+streamlit run app.py
+```
 
 ---
 
-## 🚀 Roadmap & Future Scaling
+## 📈 Roadmap & Future Scaling
 While currently optimized for a standalone cloud environment, the architecture is designed to scale:
 * **Distributed Computing:** Migrate the custom MapReduce text-processing logic to **Apache PySpark** for multi-node cluster processing.
 * **Alternative Data:** Integrate live SEC Edgar filings and Twitter/X firehose APIs for deeper sentiment granularity.
@@ -87,13 +104,14 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 📑 Citation
 If you use this work in academic research, please cite:
-
-   @misc{hanini2026macrosentiment,
-      title={Autonomous Macro-Sentiment Agentic Pipeline},
-      author={Hanini, Amjad and DaSilva, Brandon and Khopkar, Anushree},
-      year={2026},
-      note={Available at: https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline}
-    }
+```text
+@misc{hanini2026macrosentiment,
+   title={Autonomous Macro-Sentiment Agentic Pipeline},
+   author={Hanini, Amjad and DaSilva, Brandon and Khopkar, Anushree},
+   year={2026},
+   note={Available at: [https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline](https://github.com/amjad-hanini/Macro-Sentiment-Agentic-Pipeline)}
+}
+```
 
 > **Reminder:** This project is for educational and research purposes only. It does not constitute investment advice and is not produced in any broker-dealer or investment advisory capacity. The creators are not liable for any financial losses incurred from using this system.
 
