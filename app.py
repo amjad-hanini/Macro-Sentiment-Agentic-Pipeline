@@ -17,7 +17,26 @@ st.title("📈 Autonomous Agentic Analyzer")
 
 st.warning("Legal Disclaimer: This system is for **educational and research purposes only**. The AI predictions, risk scores, and autonomous executions are simulated models and do not constitute financial advice. Algorithmic trading carries significant financial risk.", icon="⚠️")
 
-st.markdown("""<style>[data-testid="stMetricValue"] { white-space: normal !important; word-wrap: break-word !important; font-size: 30px !important; line-height: 1.2 !important; }</style>""", unsafe_allow_html=True)
+st.markdown(
+    """
+    <style>
+    /* Fix Metric Wrapping */
+    [data-testid="stMetricValue"] { 
+        white-space: normal !important; 
+        word-wrap: break-word !important; 
+        font-size: 30px !important; 
+        line-height: 1.2 !important; 
+    }
+    
+    /* Increase Tab Font Size */
+    button[data-baseweb="tab"] p {
+        font-size: 20px !important;
+        font-weight: bold !important;
+    }
+    </style>
+    """, 
+    unsafe_allow_html=True
+)
 
 # Multi-API Authentication Sidebar
 st.sidebar.markdown("### 🗝️ Intelligence Integration")
