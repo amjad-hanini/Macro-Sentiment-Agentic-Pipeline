@@ -177,15 +177,41 @@ with tab_graph:
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     try:
-                        graph_prompt = f"Extract 5 entities from global news on {selected_date_str_tab3} and map relationships using simple letters for nodes (A[Fed] --> B[Tech]). Respond ONLY with JSON: {{\"mermaid_code\": \"graph TD; ...\", \"explanation\": \"...\"}}"
+                        # STRICT MERMAID GUARDRAILS ADDED HERE
+                        graph_prompt = f"""
+                        Extract 5 entities from global news on {selected_date_str_tab3} and map cause-and-effect relationships.
+                        
+                        CRITICAL MERMAID.JS RULES (FAILURE TO FOLLOW WILL CRASH SYSTEM):
+                        1. Node IDs MUST be single uppercase letters (A, B, C, D, E).
+                        2. Node labels MUST contain ONLY alphanumeric characters and spaces. NO quotes, NO parentheses, NO colons, NO hyphens.
+                        3. Strict Edge Syntax: A[Federal Reserve] --> B[Global Markets]
+                        4. The code MUST start with 'graph TD;'
+                        
+                        Respond ONLY with JSON: 
+                        {{
+                            "mermaid_code": "graph TD; A[Inflation] --> B[Interest Rates];", 
+                            "explanation": "..."
+                        }}
+                        """
                         response = model.generate_content(graph_prompt, generation_config={"response_mime_type": "application/json"})
                         graph_data = json.loads(response.text)
-                        mermaid_syntax = graph_data["mermaid_code"].replace('```mermaid', '').replace('```', '').strip()
+                        
+                        # Clean any leftover markdown formatting the AI might have snuck in
+                        mermaid_syntax = graph_data["mermaid_code"].replace('```mermaid', '').replace('```', '').replace('\n', '; ').strip()
+                        if not mermaid_syntax.startswith("graph"):
+                            mermaid_syntax = "graph TD; " + mermaid_syntax
+                            
                         col_graph, col_info = st.columns([2, 1])
                         with col_graph:
-                            st.components.v1.html(f'<div class="mermaid">{mermaid_syntax}</div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";mermaid.initialize({{startOnLoad:true,theme:"dark"}});</script>', height=800, scrolling=True)
-                        with col_info: st.success(f"🤖 **Translation:**\n\n{graph_data['explanation']}")
-                    except Exception as e: st.error(f"Graph Error: {e}")
+                            st.components.v1.html(
+                                f'<div class="mermaid">{mermaid_syntax}</div><script type="module">import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";mermaid.initialize({{startOnLoad:true,theme:"dark"}});</script>', 
+                                height=800, 
+                                scrolling=True
+                            )
+                        with col_info: 
+                            st.success(f"🤖 **Translation:**\n\n{graph_data['explanation']}")
+                    except Exception as e: 
+                        st.error(f"Graph Error: {e}")
 
 with tab_sql:
     st.subheader("🕵️‍♂️ Database Agent (Text-to-SQL)")
