@@ -16,7 +16,7 @@
 
 > **Disclaimer:** This project is produced solely for educational and academic research purposes. Nothing in this repository constitutes investment advice, a solicitation, or a recommendation to buy, sell, or hold any security or financial instrument. Algorithmic trading carries significant financial risk. The creators are not liable for any financial losses incurred from using this simulated system.
 
-> **⚡ 100% Autonomous Execution** • **🧠 Multi-Agent MoE Debate** • **📊 Dynamic GMM Clustering** • **🐳 Docker Containerized**
+> **⚡ 100% Autonomous Execution** • **🧠 Multi-Agent MoE Debate** • **📊 Offline ML Model Training** • **🐳 Docker Containerized**
 
 ## 📖 Overview
 An autonomous, multi-agent AI pipeline that synthesizes macro volatility and NLP sentiment to predict market anomalies, orchestrate MoE analyst debates, and execute algorithmic trades.
@@ -24,7 +24,7 @@ An autonomous, multi-agent AI pipeline that synthesizes macro volatility and NLP
 ### 🌟 Enterprise-Grade Architecture
 * **🤖 Text-to-SQL Database Agent:** Integrates Gemini 2.5 Flash as an active query agent, allowing users to interrogate the historical SQLite database using natural language.
 * **🧠 Agentic Memory Loop:** The system permanently archives AI-generated crisis reports back into the database, allowing current agents to retrieve and learn from the conclusions of past agents during similar market regimes.
-* **📊 GMM Market Regime Clustering:** Utilizes Unsupervised Machine Learning (Gaussian Mixture Models) to dynamically cluster historical financial data into distinct market regimes handling elliptical data overlap perfectly.
+* **📊 Offline ML Clustering & Prediction:** Utilizes Unsupervised Machine Learning (Gaussian Mixture Models) and an XGBoost/Random Forest champion model, trained offline via nightly pipelines to ensure lightning-fast UI performance.
 * **🌐 Big Data MapReduce & Stop-Word Filtering:** A custom Python MapReduce algorithm processes thousands of financial headlines to extract live "Trending Macro Themes."
 * **⚖️ 100% LLM-Driven MoE Debate:** Adversarial AI agents (Optimistic vs. Pessimistic) debate historical market context before a Lead Judge synthesizes a final verdict.
 * **💸 Autonomous Execution Webhook:** Closes the automation loop by hooking the Judge agent's verdict directly into the **Alpaca Trading API**.
@@ -35,19 +35,19 @@ An autonomous, multi-agent AI pipeline that synthesizes macro volatility and NLP
 
 ```mermaid
 graph TD;
-    A[Yahoo Finance / Reddit News] -->|Nightly Ingestion| B(Bronze: Raw Unstructured Data);
+    A[Yahoo Finance / RSS News] -->|Nightly Ingestion| B(Bronze: Raw Unstructured Data);
     B -->|MapReduce & FinBERT NLP| C(Silver: Tokenized & Scored Text);
-    C -->|GMM & Random Forest ML| D[(Gold: SQLite Structured Memory)];
-    D -->|Text-to-SQL RAG| E{Gemini 2.5 Flash Mixture-of-Experts};
+    C -->|GMM & XGBoost ML Training| D[(Gold: SQLite DB & Pickled Models)];
+    D -->|Model Loading & RAG| E{Gemini 2.5 Flash Mixture-of-Experts};
     E -->|Judge Verdict| F[Alpaca Trade API Webhook];
     E -->|Interactive UI| G[Streamlit Dashboard];
 ```
 
 This project utilizes an industry-standard **Medallion Data Architecture**:
 
-1. **Bronze Layer (Raw Ingestion):** Ingests large-scale historical Reddit WorldNews datasets alongside Yahoo Finance market data (DJIA & VIX) via daily cron jobs.
+1. **Bronze Layer (Raw Ingestion):** Ingests real-time Yahoo Finance RSS feeds alongside historical market data (DJIA & VIX) via daily cron jobs.
 2. **Silver Layer (Transformation):** Deploys a **FinBERT NLP** model to score sentiment and utilizes a custom **MapReduce** algorithm to process thousands of financial headlines into clean, filtered themes.
-3. **Gold Layer (Business Ready):** Trains a **Gaussian Mixture Model (GMM)** to cluster data into dynamic Market Regimes and securely archives autonomous AI memory logs for the Streamlit dashboard to consume.
+3. **Gold Layer (Business Ready):** Trains **XGBoost** and **Gaussian Mixture Models (GMM)** offline, exporting `.pkl` artifacts and securely archiving autonomous AI memory logs for the decoupled Streamlit dashboard to consume instantly.
 
 ---
 
@@ -59,6 +59,8 @@ Macro-Sentiment-Agentic-Pipeline/
 │   └── pipeline.yaml        # Zero-maintenance CI/CD cron job for nightly execution
 ├── app.py                   # Streamlit interactive dashboard & UI logic
 ├── pipeline.py              # Backend ETL, ML clustering, and LaTeX report generation
+├── champion_model.pkl       # Pre-trained predictive ML model artifact
+├── gmm_model.pkl            # Pre-trained clustering ML model artifact
 ├── requirements.txt         # Version-locked Python dependencies
 ├── Dockerfile               # Containerization blueprint for cloud deployment
 ├── .gitignore               # Security and environment file exclusions
@@ -75,7 +77,7 @@ Macro-Sentiment-Agentic-Pipeline/
 | **Google Gemini 2.5 Flash** | Multi-Agent Debate, Knowledge Graph, Text-to-SQL | Free Tier (15 RPM) |
 | **HuggingFace FinBERT** | NLP Sentiment Scoring | Local Compute ($0) |
 | **Alpaca Trade API** | Algorithmic Execution Webhook | Paper Trading ($0) |
-| **Scikit-Learn** | Random Forest, Gaussian Mixture Models | Local Compute ($0) |
+| **Scikit-Learn & XGBoost** | Champion Modeling, Gaussian Mixture Models | Local Compute ($0) |
 | **Apache MapReduce Logic** | Big Data Stop-Word Filtering | Local Compute ($0) |
 | **GitHub Actions** | CI/CD Automation & Nightly Cron Jobs | Free Tier |
 | **Streamlit Community** | Live Dashboard Hosting | Free Tier |
@@ -96,7 +98,11 @@ cd Macro-Sentiment-Agentic-Pipeline
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Launch the dashboard
+# 3. Run the Backend Data Pipeline (Required for first-time setup)
+# This fetches live RSS news, builds the SQLite database, and trains the ML .pkl models.
+python pipeline.py
+
+# 4. Launch the Streamlit Dashboard
 streamlit run app.py
 ```
 
