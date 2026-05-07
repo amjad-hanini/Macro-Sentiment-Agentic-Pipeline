@@ -138,7 +138,7 @@ with tab_agents:
                     genai.configure(api_key=api_key)
                     model = genai.GenerativeModel('gemini-2.5-flash')
                     top_themes = ", ".join(filtered_themes_df['Macro Theme'].head(3).tolist())
-                    debate_prompt = f"""You are orchestrating a hedge fund debate regarding the market anomaly on {selected_date_str_tab2}. Data: Drop: {sample['Price_Change_Pct']:.2f}%, VIX: {sample['Volatility_VIX']:.2f}, Themes: {top_themes}. Respond ONLY with JSON: {{"optimistic_view": "...", "pessimistic_view": "...", "executive_summary": "...", "action": "BUY/SELL/HOLD", "confidence": 85}}"""
+                    debate_prompt = f"""You are orchestrating a hedge fund debate regarding the market anomaly on {selected_date_str_tab2}. Data: Drop: {sample['Price_Change_Pct']:.2f}%, VIX: {sample['Volatility_VIX']:.2f}, Themes: {top_themes}. Respond ONLY with JSON: {{"optimistic_view": "...", "pessimistic_view": "...", "executive_summary": "...", "action": "BUY" or "SELL" or "HOLD", "confidence": 85}}"""
                     try:
                         response = model.generate_content(debate_prompt, generation_config={"response_mime_type": "application/json"})
                         st.session_state.live_report = json.loads(response.text)
