@@ -222,8 +222,14 @@ with tab_sql:
             with st.spinner("Translating to SQL..."):
                 genai.configure(api_key=api_key)
                 try:
-                    sql_resp = genai.GenerativeModel('gemini-2.5-flash').generate_content(f"Write SQLite query for table `macro_data`. Columns: `Date`, `Price_Change_Pct`, `Volatility_VIX`, `Sentiment_Score`, `Is_Anomaly`. Question: {user_q}. Return ONLY raw SQL string.")
-                    raw_sql = sql_resp.text.replace('```sql', '').replace('```', '').strip()
+                    # Added strict instructions to avoid markdown backticks completely
+                    prompt = f"Write SQLite query for table `macro_data`. Columns: `Date`, `Price_Change_Pct`, `Volatility_VIX`, `Sentiment_Score`, `Is_Anomaly`. Question: {user_q}. Return ONLY the raw SQL string. DO NOT use markdown formatting or backticks."
+                    
+                    sql_resp = genai.GenerativeModel('gemini-2.5-flash').generate_content(prompt)
+                    
+                    # Bulletproof string cleaning to catch any rogue markdown formats
+                    raw_sql = sql_resp.text.replace('```sqlite', '').replace('```sql', '').replace('```', '').strip()
+                    
                     st.code(raw_sql, language="sql")
                     with create_engine('sqlite:///macro_data.db').connect() as conn:
                         st.dataframe(pd.read_sql(text(raw_sql), conn), hide_index=True)
