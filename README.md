@@ -16,7 +16,7 @@
 
 > **Disclaimer:** This project is produced solely for educational and academic research purposes. Nothing in this repository constitutes investment advice, a solicitation, or a recommendation to buy, sell, or hold any security or financial instrument. Algorithmic trading carries significant financial risk. The creators are not liable for any financial losses incurred from using this simulated system.
 
-> **⚡ 100% Autonomous Execution** • **🧠 Multi-Agent MoE Debate** • **📊 Offline ML Model Training** • **🐳 Docker Containerized**
+> **⚡ 100% Autonomous Paper-Trading Execution** • **🧠 Multi-Agent MoE Debate** • **📊 Offline ML Model Training** • **🐳 Docker Containerized**
 
 ## 📖 Overview
 An autonomous, multi-agent AI pipeline that synthesizes macro volatility and NLP sentiment to predict market anomalies, orchestrate MoE analyst debates, and execute algorithmic trades.
@@ -27,7 +27,7 @@ An autonomous, multi-agent AI pipeline that synthesizes macro volatility and NLP
 * **📊 Offline ML Clustering & Prediction:** Utilizes Unsupervised Machine Learning (Gaussian Mixture Models) and an XGBoost/Random Forest champion model, trained offline via nightly pipelines to ensure lightning-fast UI performance.
 * **🌐 Big Data MapReduce & Stop-Word Filtering:** A custom Python MapReduce algorithm processes thousands of financial headlines to extract live "Trending Macro Themes."
 * **⚖️ 100% LLM-Driven MoE Debate:** Adversarial AI agents (Optimistic vs. Pessimistic) debate historical market context before a Lead Judge synthesizes a final verdict.
-* **💸 Autonomous Execution Webhook:** Closes the automation loop by hooking the Judge agent's verdict directly into the **Alpaca Trading API**.
+* **💸 Autonomous Execution Webhook:** Closes the automation loop by hooking the Judge agent's verdict directly into the **Alpaca Trading API (Paper Trading)**.
 
 ---
 
