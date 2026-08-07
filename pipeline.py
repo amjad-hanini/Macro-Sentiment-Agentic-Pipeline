@@ -7,11 +7,18 @@ from datetime import datetime, timedelta
 from transformers import pipeline
 import subprocess
 import joblib
+from pathlib import Path
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from sklearn.mixture import GaussianMixture
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
+
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = BASE_DIR / "macro_data.db"
+CHAMPION_MODEL_PATH = BASE_DIR / "champion_model.pkl"
+GMM_MODEL_PATH = BASE_DIR / "gmm_model.pkl"
+REPORT_TEX_PATH = BASE_DIR / "final_report.tex"
 
 # ==========================================
 # 1. DATA EXTRACTION (The "Volume" Pillar)
@@ -125,8 +132,8 @@ def train_and_export_models(df):
     gmm.fit(X)
     
     # Export Models to disk for Streamlit to load
-    joblib.dump(best_model, 'champion_model.pkl')
-    joblib.dump(gmm, 'gmm_model.pkl')
+    joblib.dump(best_model, CHAMPION_MODEL_PATH)
+    joblib.dump(gmm, GMM_MODEL_PATH)
     print("Models successfully exported to disk.")
 
 # ==========================================
@@ -147,7 +154,7 @@ def build_database():
     train_and_export_models(joined)
     
     # Save to SQLite Database
-    conn = sqlite3.connect('macro_data.db')
+    conn = sqlite3.connect(DB_PATH)
     try:
         old_db = pd.read_sql('SELECT Date, Agent_Report FROM macro_data WHERE Agent_Report IS NOT NULL', conn)
         old_db['Date'] = pd.to_datetime(old_db['Date'])
@@ -159,7 +166,7 @@ def build_database():
     conn.close()
     print("Pipeline Execution Complete. Database updated.")
 
-def generate_latex_report(db_path='macro_data.db'):
+def generate_latex_report(db_path=DB_PATH):
     try:
         conn = sqlite3.connect(db_path)
         df = pd.read_sql('SELECT * FROM macro_data ORDER BY Date DESC LIMIT 1', conn)
@@ -188,10 +195,10 @@ def generate_latex_report(db_path='macro_data.db'):
     \\end{{itemize}}
     \\end{{document}}
     """
-    with open("final_report.tex", "w") as f:
+    with open(REPORT_TEX_PATH, "w") as f:
         f.write(latex_content)
     try:
-        subprocess.run(["pdflatex", "final_report.tex"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(["pdflatex", "final_report.tex"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=BASE_DIR)
     except: pass
 
 if __name__ == "__main__":
